@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-appbg: #fcf5ff;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-appbg);
+  }
+}
+
+html, body {
+  overscroll-behavior: none;
+}
+
+.chartjs-render-monitor {
+  will-change: transform;
+}
