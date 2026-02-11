@@ -1,0 +1,49 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Production build
+dist/
+dist-ssr/
+
+# Vite cache
+.vite/
+
+# Coverage
+coverage/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Local only files
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Debug
+npm-debug.log*
