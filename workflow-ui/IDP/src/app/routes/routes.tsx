@@ -2,14 +2,14 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import ProtectedRoute from "./protected-route";
 import { lazy } from "react";
 import { ROUTE_PATHS } from "./routh-path";
+import Callback from "../pages/login/callback";
 import { MainLayout } from "../layouts/main-layout";
 import { AuthLayout } from "../layouts/auth-layout";
+
 import Dashboard from "../pages/dashboard/dashboard";
 import DocumentReview from "../pages/document_review/document-review";
 
-
 const Login = lazy(() => import("../pages/login/login"));
-// const Dashboard = lazy(() => import("../pages/dashboard/dashboard"));
 
 export const router = createBrowserRouter([
   {
@@ -17,9 +17,12 @@ export const router = createBrowserRouter([
     element: <Navigate to={ROUTE_PATHS.LOGIN} replace />,
   },
   {
-    element: (
-        <MainLayout />
-    ),
+    path: "/callback",
+    element: <Callback />,
+  },
+
+  {
+    element: <MainLayout />,
     children: [
       {
         path: ROUTE_PATHS.DASHBOARD,
@@ -33,21 +36,19 @@ export const router = createBrowserRouter([
         path: ROUTE_PATHS.DOCUMENT_REVIEW,
         element: (
           <ProtectedRoute>
-            < DocumentReview/>
+            <DocumentReview />
           </ProtectedRoute>
         ),
       },
     ],
   },
   {
-    element: (
-        <AuthLayout />
-    ),
+    element: <AuthLayout />,
     children: [
       {
         path: ROUTE_PATHS.LOGIN,
         element: <Login />,
-      }
+      },
     ],
   },
   { path: ROUTE_PATHS.NOT_FOUND, element: <div>404 Not Found</div> },

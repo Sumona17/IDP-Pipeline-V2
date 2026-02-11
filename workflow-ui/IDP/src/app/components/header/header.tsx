@@ -1,20 +1,48 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Search, Bell } from "lucide-react";
 import { Dropdown, type MenuProps } from "antd";
-import avatar from '../../../../public/assets/icons/avatar.jpg'
+import { useAuth } from "react-oidc-context";
+import avatar from "../../../../public/assets/icons/avatar.jpg";
 
 const Header: React.FC = () => {
+  const auth = useAuth();
 
-const items: MenuProps["items"] = [
-  {
-    key: "profile",
-    label: "Profile",
-  },
-  {
-    key: "logout",
-    label: "Logout",
-  },
-];
+  const handleLogout = async () => {
+    const clientId = import.meta.env.VITE_APP_COGNITO_CLIENT_ID;
+    const logoutUri = `${window.location.origin}/login`;
+    const cognitoDomain = import.meta.env.VITE_APP_COGNITO_DOMAIN;
+
+    await auth.removeUser();
+
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
+  };
+
+  const formattedName = useMemo(() => {
+    const email = auth.user?.profile?.email as string | undefined;
+    if (!email) return "User";
+
+    const usernamePart = email.split("@")[0];
+
+    return usernamePart
+      .split(".")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(" ");
+  }, [auth.user]);
+
+  const items: MenuProps["items"] = [
+    {
+      key: "profile",
+      label: "Profile",
+    },
+    {
+      key: "logout",
+      label: (
+        <span onClick={handleLogout} className="text-red-600 font-medium">
+          Logout
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="flex justify-end items-center gap-4 px-6 pt-4 pb-1">
@@ -27,14 +55,18 @@ const items: MenuProps["items"] = [
             className="bg-transparent text-sm focus:outline-none w-40"
           />
         </div>
+
         <Bell size={20} className="text-[#3C20F6] cursor-pointer" />
+
         <Dropdown menu={{ items }} trigger={["click"]}>
           <span className="cursor-pointer">
             <div className="flex items-center gap-2">
               <img className="w-8 h-8 rounded-full" src={avatar} alt="user" />
               <div className="leading-tight">
-                <p className="text-sm">Mike Ross</p>
-                <p className="text-xs text-gray-500">Underwriter</p>
+                <p className="text-sm">{formattedName}</p>
+                <p className="text-xs text-gray-500">
+                  {auth.user?.profile?.email}
+                </p>
               </div>
               <svg
                 width="16"
