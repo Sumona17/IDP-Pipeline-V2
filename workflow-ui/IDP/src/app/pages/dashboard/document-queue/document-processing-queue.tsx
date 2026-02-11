@@ -4,12 +4,31 @@ import { useNavigate } from "react-router-dom";
 
 
 
+// interface Document {
+//   id: string;
+//   documentName: string;
+//   documentType: string;
+//   status: string;
+//   confidence: number | null;
+//   submittedBy: string;
+//   submittedAt: string;
+//   processedAt: string | null;
+//   classifier: string | null;
+//   validationStatus: string;
+//   assignedTo: string | null;
+//   source: string;
+// }
+interface SubDocument {
+  documentName: string | string[];
+  documentType: string;
+  confidence: number | null;
+}
+
+
 interface Document {
   id: string;
-  documentName: string;
-  documentType: string;
+  documents: SubDocument[];
   status: string;
-  confidence: number | null;
   submittedBy: string;
   submittedAt: string;
   processedAt: string | null;
@@ -19,26 +38,72 @@ interface Document {
   source: string;
 }
 
+
 const DocumentQueue: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [typeFilter, setTypeFilter] = useState<string>('All');
 
-  const documents: Document[] = queueData.documents;
+ const documents: Document[] = queueData.documents.map((doc: any) => {
+  if (doc.documents) {
+    return doc;
+  }
+
+  return {
+    ...doc,
+    documents: [
+      {
+        documentName: doc.documentName,
+        documentType: doc.documentType,
+        confidence: doc.confidence ?? null
+      }
+    ]
+  };
+});
+
+const normalizeNames = (name: string | string[]): string[] => {
+  return Array.isArray(name) ? name : [name];
+};
 
   const navigate = useNavigate();
 
   const statuses = ['All', ...Array.from(new Set(documents.map(doc => doc.status)))];
-  const types = ['All', ...Array.from(new Set(documents.map(doc => doc.documentType)))];
+  // const types = ['All', ...Array.from(new Set(documents.map(doc => doc.documentType)))];
+const types = [
+  'All',
+  ...Array.from(
+    new Set(
+      documents.flatMap(doc =>
+        Array.isArray(doc.documents)
+          ? doc.documents.map(d => d.documentType)
+          : []
+      )
+    )
+  )
+];
+
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => {
-      const matchesSearch = doc.documentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           doc.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           doc.submittedBy.toLowerCase().includes(searchTerm.toLowerCase());
+      // const matchesSearch = doc.documentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      //                      doc.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      //                      doc.submittedBy.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch =
+  doc.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  doc.submittedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
+ doc.documents.some(d =>
+  normalizeNames(d.documentName).some(n =>
+    n.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+);
+
+
       const matchesStatus = statusFilter === 'All' || doc.status === statusFilter;
-      const matchesType = typeFilter === 'All' || doc.documentType === typeFilter;
-      
+      // const matchesType = typeFilter === 'All' || doc.documentType === typeFilter;
+      const matchesType =
+  typeFilter === 'All' ||
+  doc.documents.some(d => d.documentType === typeFilter);
+
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [documents, searchTerm, statusFilter, typeFilter]);
@@ -262,7 +327,24 @@ const DocumentQueue: React.FC = () => {
                         <td className="px-2 py-2 max-w-[200px]">
                           <div className="flex items-center">
                             <div className="ml-1.5 min-w-0">
-                              <div className="text-xs font-medium text-gray-900 truncate">{doc.documentName}</div>
+                              {/* <div className="text-xs font-medium text-gray-900 truncate">{doc.documentName}</div> */}
+                              <div className="space-y-0.5">
+{(doc.documents ?? []).map((d, idx) => (
+  <div key={idx} className="space-y-0.5">
+    {normalizeNames(d.documentName).map((name, i) => (
+      <div
+        key={i}
+        className="text-xs font-medium text-gray-900 truncate"
+        title={name}
+      >
+        {name}
+      </div>
+    ))}
+  </div>
+))}
+
+</div>
+
                               {/* <div className="text-xs text-gray-500">{doc.source}</div> */}
                             </div>
                           </div>
@@ -273,27 +355,32 @@ const DocumentQueue: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap">
-                          {doc.confidence !== null ? (
-                            <div className="flex items-center">
-                              <span className={`text-xs ${getConfidenceColor(doc.confidence)}`}>
-                                {(doc.confidence * 100).toFixed(0)}%
-                              </span>
-                              <div className="ml-1.5 w-10 bg-gray-200 rounded-full h-1">
-                                <div
-                                  className={`h-1 rounded-full ${
-                                    doc.confidence >= 0.9 ? 'bg-green-600' :
-                                    doc.confidence >= 0.7 ? 'bg-blue-600' :
-                                    doc.confidence >= 0.5 ? 'bg-yellow-600' :
-                                    'bg-red-600'
-                                  }`}
-                                  style={{ width: `${doc.confidence * 100}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">-</span>
-                          )}
-                        </td>
+  {doc.documents.some(d => d.confidence !== null) ? (
+    doc.documents.map((d, idx) => (
+      d.confidence !== null && (
+        <div key={idx} className="flex items-center mb-1">
+          <span className={`text-xs ${getConfidenceColor(d.confidence)}`}>
+            {(d.confidence * 100).toFixed(0)}%
+          </span>
+          <div className="ml-1.5 w-10 bg-gray-200 rounded-full h-1">
+            <div
+              className={`h-1 rounded-full ${
+                d.confidence >= 0.9 ? 'bg-green-600' :
+                d.confidence >= 0.7 ? 'bg-blue-600' :
+                d.confidence >= 0.5 ? 'bg-yellow-600' :
+                'bg-red-600'
+              }`}
+              style={{ width: `${d.confidence * 100}%` }}
+            />
+          </div>
+        </div>
+      )
+    ))
+  ) : (
+    <span className="text-xs text-gray-400">-</span>
+  )}
+</td>
+
                         <td className="px-2 py-2 whitespace-nowrap">
                           <span className="text-xs text-gray-500">{formatDate(doc.submittedAt)}</span>
                         </td>

@@ -1,19 +1,29 @@
 {
   "documents": [
+{
+  "id": "DOC-2024-001",
+  "documents": [
     {
-      "id": "DOC-2024-001",
       "documentName": "Invoice_Amazon_Q1_2024.pdf",
       "documentType": "Invoice",
-      "status": "Completed",
-      "confidence": 0.95,
-      "submittedBy": "John Doe",
-      "submittedAt": "2024-02-09T08:30:00Z",
-      "processedAt": "2024-02-09T08:31:45Z",
-      "classifier": "Bedrock",
-      "validationStatus": "Validated",
-      "assignedTo": "HTL Team",
-      "source": "Email"
+      "confidence": 0.95
     },
+    {
+      "documentName": "Invoice_Amazon_Q2_2024.pdf",
+      "documentType": "Invoice",
+      "confidence": 0.93
+    }
+  ],
+  "status": "Completed",
+  "submittedBy": "John Doe",
+  "submittedAt": "2024-02-09T08:30:00Z",
+  "processedAt": "2024-02-09T08:31:45Z",
+  "classifier": "Bedrock",
+  "validationStatus": "Validated",
+  "assignedTo": "HTL Team",
+  "source": "Email"
+},
+
     {
       "id": "DOC-2024-002",
       "documentName": "Contract_Vendor_ABC.docx",
