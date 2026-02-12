@@ -7,6 +7,7 @@ const oidcConfig = {
 
   redirect_uri: `${window.location.origin}/callback`,
   post_logout_redirect_uri: `${window.location.origin}/login`,
+  
 
   response_type: "code",
   scope: "openid email phone",
@@ -21,6 +22,7 @@ const oidcConfig = {
   userStore: new WebStorageStateStore({
     store: window.sessionStorage,
   }),
+
 
   onSigninCallback: () => {
     window.history.replaceState({}, document.title, window.location.pathname);
