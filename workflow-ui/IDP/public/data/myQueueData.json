@@ -1,0 +1,136 @@
+{
+  "submissions": [
+    {
+      "submissionId": "SUB-2024-1001",
+      "customerName": "Acme Corporation",
+      "lob": "Commercial Property",
+      "status": "Pending Review",
+      "dateCreated": "2024-02-10T08:30:00Z",
+      "dateModified": "2024-02-11T09:45:00Z",
+      "broker": "Sarah Johnson",
+      "createdBy": "John Smith",
+      "priority": "High"
+    },
+    {
+      "submissionId": "SUB-2024-1002",
+      "customerName": "TechStart Solutions",
+      "lob": "Workers Compensation",
+      "status": "In Progress",
+      "dateCreated": "2024-02-09T14:20:00Z",
+      "dateModified": "2024-02-11T10:15:00Z",
+      "broker": "Robert Martinez",
+      "createdBy": "Emily Davis",
+      "priority": "Medium"
+    },
+    {
+      "submissionId": "SUB-2024-1003",
+      "customerName": "Global Logistics Inc",
+      "lob": "Auto Liability",
+      "status": "Completed",
+      "dateCreated": "2024-02-08T11:00:00Z",
+      "dateModified": "2024-02-10T16:30:00Z",
+      "broker": "Jennifer Wilson",
+      "createdBy": "Michael Chen",
+      "priority": "Low"
+    },
+    {
+      "submissionId": "SUB-2024-1004",
+      "customerName": "BuildPro Construction",
+      "lob": "General Liability",
+      "status": "Pending Review",
+      "dateCreated": "2024-02-11T07:15:00Z",
+      "dateModified": "2024-02-11T07:15:00Z",
+      "broker": "Michael Brown",
+      "createdBy": "Lisa Anderson",
+      "priority": "High"
+    },
+    {
+      "submissionId": "SUB-2024-1005",
+      "customerName": "Consult Corp LLC",
+      "lob": "Professional Liability",
+      "status": "In Progress",
+      "dateCreated": "2024-02-10T09:30:00Z",
+      "dateModified": "2024-02-11T11:20:00Z",
+      "broker": "David Lee",
+      "createdBy": "Robert Wilson",
+      "priority": "High"
+    },
+    {
+      "submissionId": "SUB-2024-1006",
+      "customerName": "RetailMart Stores",
+      "lob": "Commercial Property",
+      "status": "On Hold",
+      "dateCreated": "2024-02-09T13:45:00Z",
+      "dateModified": "2024-02-10T14:20:00Z",
+      "broker": "Sarah Johnson",
+      "createdBy": "James Taylor",
+      "priority": "Low"
+    },
+    {
+      "submissionId": "SUB-2024-1007",
+      "customerName": "DataTech Solutions",
+      "lob": "Cyber Liability",
+      "status": "Pending Review",
+      "dateCreated": "2024-02-08T10:00:00Z",
+      "dateModified": "2024-02-11T08:30:00Z",
+      "broker": "Robert Martinez",
+      "createdBy": "Susan Garcia",
+      "priority": "Medium"
+    },
+    {
+      "submissionId": "SUB-2024-1008",
+      "customerName": "FinancePlus Inc",
+      "lob": "D&O Liability",
+      "status": "Completed",
+      "dateCreated": "2024-02-07T15:30:00Z",
+      "dateModified": "2024-02-09T17:45:00Z",
+      "broker": "Jennifer Wilson",
+      "createdBy": "William Moore",
+      "priority": "Medium"
+    },
+    {
+      "submissionId": "SUB-2024-1009",
+      "customerName": "Ocean Shipping Co",
+      "lob": "Marine Cargo",
+      "status": "In Progress",
+      "dateCreated": "2024-02-10T12:15:00Z",
+      "dateModified": "2024-02-11T09:00:00Z",
+      "broker": "Michael Brown",
+      "createdBy": "Charles Rodriguez",
+      "priority": "High"
+    },
+    {
+      "submissionId": "SUB-2024-1010",
+      "customerName": "Healthcare Associates",
+      "lob": "Umbrella Liability",
+      "status": "Pending Review",
+      "dateCreated": "2024-02-11T08:00:00Z",
+      "dateModified": "2024-02-11T08:00:00Z",
+      "broker": "David Lee",
+      "createdBy": "Patricia Martinez",
+      "priority": "Low"
+    },
+    {
+      "submissionId": "SUB-2024-1011",
+      "customerName": "Manufacturing Solutions",
+      "lob": "Equipment Breakdown",
+      "status": "In Progress",
+      "dateCreated": "2024-02-09T11:20:00Z",
+      "dateModified": "2024-02-10T15:45:00Z",
+      "broker": "Sarah Johnson",
+      "createdBy": "Robert Jackson",
+      "priority": "Medium"
+    },
+    {
+      "submissionId": "SUB-2024-1012",
+      "customerName": "Consumer Goods Corp",
+      "lob": "Product Liability",
+      "status": "Completed",
+      "dateCreated": "2024-02-08T14:00:00Z",
+      "dateModified": "2024-02-10T10:30:00Z",
+      "broker": "Robert Martinez",
+      "createdBy": "Mary Thompson",
+      "priority": "Low"
+    }
+  ]
+}

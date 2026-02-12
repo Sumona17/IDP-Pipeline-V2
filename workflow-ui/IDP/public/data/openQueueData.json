@@ -1,0 +1,148 @@
+{
+  "documents": [
+    {
+      "id": "DOC-2024-001",
+      "heading": "Commercial Property Insurance Application",
+      "productLOB": "Commercial Property",
+      "from": "john.smith@acmecorp.com",
+      "customerName": "Acme Corporation",
+      "brokerName": "Sarah Johnson",
+      "emailSubject": "New Property Insurance Quote Request",
+      "dateReceived": "2024-02-11T08:30:00Z",
+      "documentSource": "Email",
+      "status": "Pending Review"
+    },
+    {
+      "id": "DOC-2024-002",
+      "heading": "Workers Compensation Renewal Documents",
+      "productLOB": "Workers Compensation",
+      "from": "mike.davis@techstart.com",
+      "customerName": "TechStart Solutions",
+      "brokerName": "Robert Martinez",
+      "emailSubject": "WC Policy Renewal - Urgent",
+      "dateReceived": "2024-02-11T09:15:00Z",
+      "documentSource": "SFTP",
+      "status": "In Progress"
+    },
+    {
+      "id": "DOC-2024-003",
+      "heading": "Auto Liability Insurance Application",
+      "productLOB": "Auto Liability",
+      "from": "lisa.chen@globallogistics.com",
+      "customerName": "Global Logistics Inc",
+      "brokerName": "Jennifer Wilson",
+      "emailSubject": "Fleet Auto Insurance Application",
+      "dateReceived": "2024-02-11T07:45:00Z",
+      "documentSource": "File Upload",
+      "status": "Pending Review"
+    },
+    {
+      "id": "DOC-2024-004",
+      "heading": "General Liability Policy Documents",
+      "productLOB": "General Liability",
+      "from": "tom.anderson@buildpro.com",
+      "customerName": "BuildPro Construction",
+      "brokerName": "Michael Brown",
+      "emailSubject": "GL Policy Submission - BuildPro",
+      "dateReceived": "2024-02-11T10:00:00Z",
+      "documentSource": "Email",
+      "status": "Pending Review"
+    },
+    {
+      "id": "DOC-2024-005",
+      "heading": "Professional Liability Application",
+      "productLOB": "Professional Liability",
+      "from": "emily.white@consultcorp.com",
+      "customerName": "Consult Corp LLC",
+      "brokerName": "David Lee",
+      "emailSubject": "E&O Insurance Quote Request",
+      "dateReceived": "2024-02-11T06:20:00Z",
+      "documentSource": "Email",
+      "status": "Completed"
+    },
+    {
+      "id": "DOC-2024-006",
+      "heading": "Property Insurance Renewal Package",
+      "productLOB": "Commercial Property",
+      "from": "james.taylor@retailmart.com",
+      "customerName": "RetailMart Stores",
+      "brokerName": "Sarah Johnson",
+      "emailSubject": "Property Insurance Renewal Documentation",
+      "dateReceived": "2024-02-11T11:30:00Z",
+      "documentSource": "SFTP",
+      "status": "In Progress"
+    },
+    {
+      "id": "DOC-2024-007",
+      "heading": "Cyber Liability Insurance Quote",
+      "productLOB": "Cyber Liability",
+      "from": "susan.garcia@datatech.com",
+      "customerName": "DataTech Solutions",
+      "brokerName": "Robert Martinez",
+      "emailSubject": "Cyber Insurance Application - DataTech",
+      "dateReceived": "2024-02-10T14:45:00Z",
+      "documentSource": "File Upload",
+      "status": "Pending Review"
+    },
+    {
+      "id": "DOC-2024-008",
+      "heading": "Directors and Officers Liability Docs",
+      "productLOB": "D&O Liability",
+      "from": "william.moore@financeplus.com",
+      "customerName": "FinancePlus Inc",
+      "brokerName": "Jennifer Wilson",
+      "emailSubject": "D&O Policy Application Documents",
+      "dateReceived": "2024-02-10T16:20:00Z",
+      "documentSource": "Email",
+      "status": "Pending Review"
+    },
+    {
+      "id": "DOC-2024-009",
+      "heading": "Marine Cargo Insurance Application",
+      "productLOB": "Marine Cargo",
+      "from": "charles.rodriguez@oceanship.com",
+      "customerName": "Ocean Shipping Co",
+      "brokerName": "Michael Brown",
+      "emailSubject": "Marine Insurance Quote - Urgent",
+      "dateReceived": "2024-02-10T13:10:00Z",
+      "documentSource": "SFTP",
+      "status": "In Progress"
+    },
+    {
+      "id": "DOC-2024-010",
+      "heading": "Umbrella Liability Policy Documents",
+      "productLOB": "Umbrella Liability",
+      "from": "patricia.martinez@healthcare.com",
+      "customerName": "Healthcare Associates",
+      "brokerName": "David Lee",
+      "emailSubject": "Umbrella Policy Application",
+      "dateReceived": "2024-02-10T09:30:00Z",
+      "documentSource": "File Upload",
+      "status": "Completed"
+    },
+    {
+      "id": "DOC-2024-011",
+      "heading": "Equipment Breakdown Insurance",
+      "productLOB": "Equipment Breakdown",
+      "from": "robert.jackson@manufacturing.com",
+      "customerName": "Manufacturing Solutions",
+      "brokerName": "Sarah Johnson",
+      "emailSubject": "Equipment Coverage Application",
+      "dateReceived": "2024-02-09T15:45:00Z",
+      "documentSource": "Email",
+      "status": "Pending Review"
+    },
+    {
+      "id": "DOC-2024-012",
+      "heading": "Product Liability Insurance Quote",
+      "productLOB": "Product Liability",
+      "from": "mary.thompson@consumergoods.com",
+      "customerName": "Consumer Goods Corp",
+      "brokerName": "Robert Martinez",
+      "emailSubject": "Product Liability Quote Request",
+      "dateReceived": "2024-02-09T11:20:00Z",
+      "documentSource": "SFTP",
+      "status": "In Progress"
+    }
+  ]
+}

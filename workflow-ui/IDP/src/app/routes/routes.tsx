@@ -8,6 +8,7 @@ import { AuthLayout } from "../layouts/auth-layout";
 
 import Dashboard from "../pages/dashboard/dashboard";
 import DocumentReview from "../pages/document_review/document-review";
+import DocumentUploaded from "../pages/document/document";
 
 const Login = lazy(() => import("../pages/login/login"));
 
@@ -29,6 +30,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: ROUTE_PATHS.DOCUMENT,
+        element: (
+          <ProtectedRoute>
+            <DocumentUploaded />
           </ProtectedRoute>
         ),
       },
