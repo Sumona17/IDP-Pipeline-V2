@@ -7,6 +7,7 @@ interface UploadedDocument {
   documentName: string;
   documentType: string;
   customerName: string;
+  confidence: number;
   createdAt: string;
   documentSize: string;
 }
@@ -182,12 +183,13 @@ const DocumentUploaded: React.FC = () => {
       <div className="flex-1 overflow-hidden px-0 pb-3">
         <div className="border border-gray-200 rounded flex flex-col overflow-hidden">
           <div className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-280px)]">
-            <table className="w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200 text-lg">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[30%]">Document Name</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">Document Type</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[20%]">Customer Name</th>
+                  <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Progress Score</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">Created At</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Document Size</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Actions</th>
@@ -223,6 +225,23 @@ const DocumentUploaded: React.FC = () => {
                       <td className="px-2 py-2">
                         <span className="text-xs font-medium text-gray-900 truncate block">{doc.customerName}</span>
                       </td>
+                     <td className="px-2 py-2">
+  <div className="flex flex-col gap-1">
+    <span className="text-xs font-medium text-gray-900">
+      {doc.confidence ? Math.round(Number(doc.confidence) * 100) : 0}%
+    </span>
+
+    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-cyan-600 rounded-full transition-all"
+        style={{
+          width: `${doc.confidence ? Number(doc.confidence) * 100 : 0}%`,
+        }}
+      />
+    </div>
+  </div>
+</td>
+
                       <td className="px-2 py-2">
                         <span className="text-xs text-gray-600">{formatDate(doc.createdAt)}</span>
                       </td>

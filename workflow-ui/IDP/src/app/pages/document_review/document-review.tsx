@@ -753,59 +753,62 @@ const DocumentComparison: React.FC = () => {
             </div>
 
             {/* Zoom Controls */}
-            <div className="flex items-center gap-4 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <span className="px-2.5 py-1 bg-cyan-100 text-cyan-700 rounded-md">
-                  {String(currentPage).padStart(2, '0')}
-                </span>
-                <span className="text-gray-400">/</span>
-                <span className="text-gray-600">{String(totalPages).padStart(2, '0')}</span>
-              </div>
-              
-              <div className="flex-1 flex items-center gap-3">
-                <button
-                  onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
-                  disabled={zoom <= 0.25}
-                  className="p-2 rounded-lg border-2 border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  </svg>
-                </button>
+           <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-200 shadow-sm text-xs">
+  <div className="flex items-center gap-1 font-semibold text-gray-700">
+    <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded">
+      {String(currentPage).padStart(2, '0')}
+    </span>
+    <span className="text-gray-400">/</span>
+    <span className="text-gray-600">
+      {String(totalPages).padStart(2, '0')}
+    </span>
+  </div>
+  
+  <div className="flex-1 flex items-center gap-2">
+    <button
+      onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
+      disabled={zoom <= 0.25}
+      className="p-1.5 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+      </svg>
+    </button>
 
-                <div className="flex-1 flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0.25"
-                    max="4"
-                    step="0.25"
-                    value={zoom}
-                    onChange={(e) => setZoom(Number(e.target.value))}
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-600"
-                  />
-                  <span className="text-sm font-bold text-gray-700 min-w-[50px] text-center px-2.5 py-1 bg-gray-100 rounded-md">
-                    {Math.round(zoom * 100)}%
-                  </span>
-                </div>
+    <div className="flex-1 flex items-center gap-1">
+      <input
+        type="range"
+        min="0.25"
+        max="4"
+        step="0.25"
+        value={zoom}
+        onChange={(e) => setZoom(Number(e.target.value))}
+        className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-600"
+      />
+      <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-gray-100 rounded">
+        {Math.round(zoom * 100)}%
+      </span>
+    </div>
 
-                <button
-                  onClick={() => setZoom((prev) => Math.min(prev + 0.25, 4))}
-                  disabled={zoom >= 4}
-                  className="p-2 rounded-lg border-2 border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
+    <button
+      onClick={() => setZoom((prev) => Math.min(prev + 0.25, 4))}
+      disabled={zoom >= 4}
+      className="p-1.5 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+  </div>
 
-              <button className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white text-sm font-semibold rounded-lg hover:from-cyan-700 hover:to-cyan-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download
-              </button>
-            </div>
+  <button className="px-2 py-1.5 bg-cyan-600 text-white text-[10px] font-semibold rounded-md hover:bg-cyan-700 transition flex items-center gap-1">
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+    Download
+  </button>
+</div>
+
           </div>
 
           {/* PDF Viewer */}
