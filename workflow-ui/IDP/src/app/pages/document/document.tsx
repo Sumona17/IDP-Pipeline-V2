@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, type JSX } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import documentUploadedData from '../../../../public/data/uploadedDocumentData.json';
 
 interface UploadedDocument {
@@ -11,12 +12,20 @@ interface UploadedDocument {
 }
 
 const DocumentUploaded: React.FC = () => {
+  const navigate = useNavigate();
+  const { submissionId } = useParams<{ submissionId?: string }>();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
   const documents: UploadedDocument[] = documentUploadedData.documents;
+
+  useEffect(() => {
+    if (submissionId) {
+      console.log('Viewing documents for submission:', submissionId);
+    }
+  }, [submissionId]);
 
   // Get unique values for filters
   const documentTypes = ['All', ...Array.from(new Set(documents.map(doc => doc.documentType)))];
@@ -68,17 +77,23 @@ const DocumentUploaded: React.FC = () => {
 
   // Handle view
   const handleView = (docId: string) => {
-    console.log('Viewing document:', docId);
-    // Add your view logic here
+    // Open document in new tab/window
+    window.open(`/api/documents/${docId}/view`, '_blank');
   };
 
-  // Handle download
   const handleDownload = (docId: string, docName: string) => {
-    console.log('Downloading document:', docId, docName);
-    // Add your download logic here
+    const link = document.createElement('a');
+    link.href = `/api/documents/${docId}/download`;
+    link.download = docName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  // Get file extension for icon
+  const handleDocumentClick = (docId: string) => {
+    navigate('/document-review');
+  };
+
   const getFileIcon = (filename: string): JSX.Element => {
     const extension = filename.split('.').pop()?.toLowerCase();
     
@@ -120,7 +135,6 @@ const DocumentUploaded: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Filters */}
       <div className="px-0 pt-2 pb-1.5 flex-shrink-0">
         <div className="flex items-end gap-2">
           <div className="flex-1 grid grid-cols-4 gap-2">
@@ -165,8 +179,6 @@ const DocumentUploaded: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Table */}
       <div className="flex-1 overflow-hidden px-0 pb-3">
         <div className="border border-gray-200 rounded flex flex-col overflow-hidden">
           <div className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-280px)]">
@@ -197,7 +209,12 @@ const DocumentUploaded: React.FC = () => {
                       <td className="px-2 py-2">
                         <div className="flex items-center space-x-2">
                           {getFileIcon(doc.documentName)}
-                          <span className="text-xs text-gray-900 truncate block">{doc.documentName}</span>
+                          <button
+                            onClick={() => handleDocumentClick(doc.id)}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer truncate block text-left"
+                          >
+                            {doc.documentName}
+                          </button>
                         </div>
                       </td>
                       <td className="px-2 py-2">
@@ -241,8 +258,6 @@ const DocumentUploaded: React.FC = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
           {filteredDocuments.length > 0 && (
             <div className="bg-gray-50 px-3 py-1.5 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
               <div className="text-xs text-gray-700">
