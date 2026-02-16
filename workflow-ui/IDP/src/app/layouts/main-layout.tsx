@@ -7,11 +7,11 @@ import Header from "../components/header/header";
 export const MainLayout = () => {
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-w-0">
         <Header />
-        <main className="p-6 overflow-auto h-full">
+        <main className="flex-1 p-6 overflow-auto min-w-0">
           <Outlet />
         </main>
       </div>

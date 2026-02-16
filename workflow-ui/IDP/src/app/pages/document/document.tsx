@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, type JSX } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import documentUploadedData from '../../../../public/data/uploadedDocumentData.json';
 
 interface UploadedDocument {
@@ -6,17 +7,26 @@ interface UploadedDocument {
   documentName: string;
   documentType: string;
   customerName: string;
+  confidence: number;
   createdAt: string;
   documentSize: string;
 }
 
 const DocumentUploaded: React.FC = () => {
+  const navigate = useNavigate();
+  const { submissionId } = useParams<{ submissionId?: string }>();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
   const documents: UploadedDocument[] = documentUploadedData.documents;
+
+  useEffect(() => {
+    if (submissionId) {
+      console.log('Viewing documents for submission:', submissionId);
+    }
+  }, [submissionId]);
 
   // Get unique values for filters
   const documentTypes = ['All', ...Array.from(new Set(documents.map(doc => doc.documentType)))];
@@ -68,17 +78,23 @@ const DocumentUploaded: React.FC = () => {
 
   // Handle view
   const handleView = (docId: string) => {
-    console.log('Viewing document:', docId);
-    // Add your view logic here
+    // Open document in new tab/window
+    window.open(`/api/documents/${docId}/view`, '_blank');
   };
 
-  // Handle download
   const handleDownload = (docId: string, docName: string) => {
-    console.log('Downloading document:', docId, docName);
-    // Add your download logic here
+    const link = document.createElement('a');
+    link.href = `/api/documents/${docId}/download`;
+    link.download = docName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  // Get file extension for icon
+  const handleDocumentClick = (docId: string) => {
+    navigate('/document-review');
+  };
+
   const getFileIcon = (filename: string): JSX.Element => {
     const extension = filename.split('.').pop()?.toLowerCase();
     
@@ -120,7 +136,6 @@ const DocumentUploaded: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Filters */}
       <div className="px-0 pt-2 pb-1.5 flex-shrink-0">
         <div className="flex items-end gap-2">
           <div className="flex-1 grid grid-cols-4 gap-2">
@@ -165,17 +180,16 @@ const DocumentUploaded: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Table */}
       <div className="flex-1 overflow-hidden px-0 pb-3">
         <div className="border border-gray-200 rounded flex flex-col overflow-hidden">
           <div className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-280px)]">
-            <table className="w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200 text-lg">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[30%]">Document Name</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">Document Type</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[20%]">Customer Name</th>
+                  <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Progress Score</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">Created At</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Document Size</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Actions</th>
@@ -197,7 +211,12 @@ const DocumentUploaded: React.FC = () => {
                       <td className="px-2 py-2">
                         <div className="flex items-center space-x-2">
                           {getFileIcon(doc.documentName)}
-                          <span className="text-xs text-gray-900 truncate block">{doc.documentName}</span>
+                          <button
+                            onClick={() => handleDocumentClick(doc.id)}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer truncate block text-left"
+                          >
+                            {doc.documentName}
+                          </button>
                         </div>
                       </td>
                       <td className="px-2 py-2">
@@ -206,6 +225,23 @@ const DocumentUploaded: React.FC = () => {
                       <td className="px-2 py-2">
                         <span className="text-xs font-medium text-gray-900 truncate block">{doc.customerName}</span>
                       </td>
+                     <td className="px-2 py-2">
+  <div className="flex flex-col gap-1">
+    <span className="text-xs font-medium text-gray-900">
+      {doc.confidence ? Math.round(Number(doc.confidence) * 100) : 0}%
+    </span>
+
+    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-cyan-600 rounded-full transition-all"
+        style={{
+          width: `${doc.confidence ? Number(doc.confidence) * 100 : 0}%`,
+        }}
+      />
+    </div>
+  </div>
+</td>
+
                       <td className="px-2 py-2">
                         <span className="text-xs text-gray-600">{formatDate(doc.createdAt)}</span>
                       </td>
@@ -241,8 +277,6 @@ const DocumentUploaded: React.FC = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
           {filteredDocuments.length > 0 && (
             <div className="bg-gray-50 px-3 py-1.5 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
               <div className="text-xs text-gray-700">

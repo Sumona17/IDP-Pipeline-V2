@@ -1,495 +1,821 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+// Import PDF.js - using legacy build for better compatibility
+const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+// Set worker path to use the legacy worker from node_modules
+const workerSrc = new URL(
+  'pdfjs-dist/legacy/build/pdf.worker.mjs',
+  import.meta.url
+).toString();
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+
 interface BoundingBox {
-  Width: number;
-  Height: number;
   Left: number;
   Top: number;
+  Width: number;
+  Height: number;
 }
 
-interface FieldData {
-  value: string | number | boolean;
+interface TableRow {
+  key: string;
+  section?: string;
+  field: string;
+  fieldPath?: string;
+  value: string;
   confidence: number | null;
-  page: number;
+  confidencePercent: string;
   boundingBox: BoundingBox | null;
+  page: number;
+  review: boolean;
+  overrideValue: string;
+  isSection?: boolean;
 }
 
-interface Section {
-  [key: string]: FieldData | FieldData[] | Section | Section[];
+interface RowEdit {
+  review: boolean;
+  overrideValue: string;
 }
-
-interface DocumentData {
-  documentType: string;
-  sections: {
-    [key: string]: Section | Section[];
-  };
-}
-
-interface SelectedField {
-  path: string;
-  label: string;
-  data: FieldData;
-}
-
-const formatLabel = (key: string): string => {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (str) => str.toUpperCase())
-    .trim();
-};
-
-const flattenData = (
-  obj: any,
-  parentKey = '',
-  result: Array<{ path: string; label: string; data: FieldData }> = []
-): Array<{ path: string; label: string; data: FieldData }> => {
-  for (const key in obj) {
-    const newPath = parentKey ? `${parentKey}.${key}` : key;
-    if (obj[key] && typeof obj[key] === 'object' && 'value' in obj[key]) {
-      result.push({
-        path: newPath,
-        label: formatLabel(key),
-        data: obj[key] as FieldData,
-      });
-    } else if (Array.isArray(obj[key])) {
-      obj[key].forEach((item: any, index: number) => {
-        if (item && typeof item === 'object' && 'value' in item) {
-          result.push({
-            path: `${newPath}[${index}]`,
-            label: `${formatLabel(key)} ${index + 1}`,
-            data: item,
-          });
-        } else if (item && typeof item === 'object') {
-          flattenData(item, `${newPath}[${index}]`, result);
-        }
-      });
-    } else if (obj[key] && typeof obj[key] === 'object') {
-      flattenData(obj[key], newPath, result);
-    }
-  }
-  return result;
-};
-
-const groupFieldsBySection = (fields: Array<{ path: string; label: string; data: FieldData }>) => {
-  const sections: { [key: string]: Array<{ path: string; label: string; data: FieldData }> } = {};
-  fields.forEach((field) => {
-    const topLevelSection = field.path.split('.')[1] || 'other';
-    if (!sections[topLevelSection]) {
-      sections[topLevelSection] = [];
-    }
-    sections[topLevelSection].push(field);
-  });
-  return sections;
-};
 
 const DocumentComparison: React.FC = () => {
-  const [documentData, setDocumentData] = useState<DocumentData | null>(null);
-  const [selectedField, setSelectedField] = useState<SelectedField | null>(null);
-  const [editMode, setEditMode] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSection, setSelectedSection] = useState<string>('all');
+  // State management
+  const [textractData, setTextractData] = useState<any[]>([]);
+  const [selectedField, setSelectedField] = useState<TableRow | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [numPages, setNumPages] = useState<number>(4);
-  const documentViewerRef = useRef<HTMLDivElement>(null);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalFields, setTotalFields] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(1);
+  const [baseScale, setBaseScale] = useState<number>(1);
+  const [searchText, setSearchText] = useState('');
+  const [confidenceFilter, setConfidenceFilter] = useState('all');
+  const [rowEdits, setRowEdits] = useState<Record<string, RowEdit>>({});
+  const [renderedPages, setRenderedPages] = useState<Record<number, any>>({});
+  const [naturalPageSize, setNaturalPageSize] = useState({ width: 0, height: 0 });
+  const [highlightBox, setHighlightBox] = useState<any>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [pdfError, setPdfError] = useState<string>('');
+  const [dataError, setDataError] = useState<string>('');
   
-  const pdfUrl = '/document.pdf';
+  // Refs
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pdfScrollRef = useRef<HTMLDivElement>(null);
+  const pdfDocRef = useRef<any>(null);
+  const pagesContainerRef = useRef<HTMLDivElement>(null);
+  const renderTasksRef = useRef<Record<number, any>>({});
 
-  useEffect(() => {
-    const sampleData: DocumentData = {
-      documentType: "ACORD 125",
-      sections: {
-        agency: {
-          agencyName: {
-            value: "Aon Global Brokers",
-            confidence: 99.951171875,
-            page: 1,
-            boundingBox: {
-              Width: 0.11322050541639328,
-              Height: 0.008148377761244774,
-              Left: 0.039105646312236786,
-              Top: 0.08535023033618927
-            }
-          },
-          agencyPhoneNumber: {
-            value: "44412345678",
-            confidence: 97.607421875,
-            page: 1,
-            boundingBox: {
-              Width: 0.07947105169296265,
-              Height: 0.007767722941935062,
-              Left: 0.11446130275726318,
-              Top: 0.17653892934322357
-            }
-          },
-          agencyEmail: {
-            value: "rjohn@aonglobal.com",
-            confidence: 99.90234375,
-            page: 1,
-            boundingBox: {
-              Width: 0.12640385329723358,
-              Height: 0.010299015790224075,
-              Left: 0.09843695908784866,
-              Top: 0.20647180080413818
-            }
-          }
-        },
-        applicant: {
-          applicantName: {
-            value: "Apex Landscaping Inc.",
-            confidence: 94.326904296875,
-            page: 1,
-            boundingBox: {
-              Width: 0.1313663274049759,
-              Height: 0.009768798016011715,
-              Left: 0.03933333978056908,
-              Top: 0.6384437680244446
-            }
-          },
-          applicantMailingAddress: {
-            value: "123-05 84th Avenue, Kew Gardens New York - 11415",
-            confidence: 99.658203125,
-            page: 1,
-            boundingBox: null
-          },
-          applicantPhone: {
-            value: "55590927672",
-            confidence: 98.974609375,
-            page: 1,
-            boundingBox: {
-              Width: 0.188084214925766,
-              Height: 0.00806900393217802,
-              Left: 0.506050705909729,
-              Top: 0.6540398597717285
-            }
-          }
-        },
-        policyInformation: {
-          proposedEffectiveDate: {
-            value: "01/01/2025",
-            confidence: 99.54426574707031,
-            page: 1,
-            boundingBox: {
-              Width: 0.06536129862070084,
-              Height: 0.00824124924838543,
-              Left: 0.05297785624861717,
-              Top: 0.5853658318519592
-            }
-          },
-          proposedExpirationDate: {
-            value: "12/31/2025",
-            confidence: 99.755859375,
-            page: 1,
-            boundingBox: {
-              Width: 0.06420950591564178,
-              Height: 0.008164842613041401,
-              Left: 0.16847826540470123,
-              Top: 0.5853462219238281
-            }
-          },
-          carrier: {
-            value: "AIG Insurance",
-            confidence: 99.951171875,
-            page: 1,
-            boundingBox: {
-              Width: 0.08343169838190079,
-              Height: 0.00811728835105896,
-              Left: 0.5095629096031189,
-              Top: 0.08542405068874359
-            }
-          }
-        }
-      }
-    };
-    setDocumentData(sampleData);
-  }, []);
+  const DPI_SCALE = 2;
+  const CONFIDENCE_THRESHOLD = 70;
 
-  const handleFieldClick = (field: { path: string; label: string; data: FieldData }) => {
-    setSelectedField(field);
-    setEditMode(null);
-    if(field.data.page) setCurrentPage(field.data.page);
+  // PDF path - can be configured
+  const PDF_PATH = '/document.pdf';
+  const DATA_PATH = '/data/comparedata.json';
+
+  // Format confidence score
+  const formatConfidenceScore = (score: number | null): string => {
+    if (score === null || score === undefined) return '-';
+    return Math.round(score).toString();
   };
 
-  const handleEditClick = (path: string, currentValue: string | number | boolean) => {
-    setEditMode(path);
-    setEditValue(String(currentValue));
-  };
-
-  const handleSaveEdit = (path: string) => {
-    console.log('Saving edit:', path, editValue);
-    setEditMode(null);
-  };
-
-  const handleCancelEdit = () => {
-    setEditMode(null);
-    setEditValue('');
-  };
-
+  // Get confidence color
   const getConfidenceColor = (confidence: number | null): string => {
-    if (confidence === null) return 'text-gray-500';
+    if (confidence === null) return 'text-gray-600';
     if (confidence >= 95) return 'text-emerald-600';
-    if (confidence >= 85) return 'text-amber-600';
+    if (confidence >= CONFIDENCE_THRESHOLD) return 'text-amber-600';
     return 'text-red-600';
   };
 
-  const getConfidenceBgColor = (confidence: number | null): string => {
-    if (confidence === null) return 'bg-gray-100';
-    if (confidence >= 95) return 'bg-emerald-50';
-    if (confidence >= 85) return 'bg-amber-50';
+  const getConfidenceBg = (confidence: number | null): string => {
+    if (confidence === null) return 'bg-white';
+    if (confidence >= 95) return 'bg-white';
+    if (confidence >= CONFIDENCE_THRESHOLD) return 'bg-amber-50';
     return 'bg-red-50';
   };
 
-  if (!documentData) {
+  const getHighlightColor = (confidenceScore: number | null): string => {
+    const score = Number(confidenceScore);
+    if (!score || score < CONFIDENCE_THRESHOLD) {
+      return '#EF4444';
+    }
+    return '#0891B2';
+  };
+
+  // Flatten nested JSON structure
+  const flattenData = (data: any): TableRow[] => {
+    const rows: TableRow[] = [];
+
+    const processSection = (sectionName: string, sectionData: any, page: number) => {
+      if (Array.isArray(sectionData)) {
+        sectionData.forEach((item, index) => {
+          Object.entries(item).forEach(([key, value]: [string, any]) => {
+            if (value && typeof value === 'object' && 'value' in value) {
+              rows.push({
+                key: `${page}-${sectionName}-${key}-${index}`,
+                section: sectionName,
+                field: formatLabel(key),
+                fieldPath: key,
+                value: String(value.value),
+                confidence: value.confidence || null,
+                confidencePercent: formatConfidenceScore(value.confidence),
+                boundingBox: value.boundingBox || null,
+                page: value.page || page,
+                review: false,
+                overrideValue: ''
+              });
+            }
+          });
+        });
+      } else if (typeof sectionData === 'object') {
+        Object.entries(sectionData).forEach(([key, value]: [string, any]) => {
+          if (value && typeof value === 'object' && 'value' in value) {
+            rows.push({
+              key: `${page}-${sectionName}-${key}`,
+              section: sectionName,
+              field: formatLabel(key),
+              fieldPath: key,
+              value: String(value.value),
+              confidence: value.confidence || null,
+              confidencePercent: formatConfidenceScore(value.confidence),
+              boundingBox: value.boundingBox || null,
+              page: value.page || page,
+              review: false,
+              overrideValue: ''
+            });
+          }
+        });
+      }
+    };
+
+    if (data.sections) {
+      Object.entries(data.sections).forEach(([sectionName, sectionData]) => {
+        // Add section header
+        rows.push({
+          key: `section-${sectionName}`,
+          field: sectionName.replace(/_/g, ' ').toUpperCase(),
+          value: '',
+          confidence: null,
+          confidencePercent: '-',
+          boundingBox: null,
+          page: 1,
+          review: false,
+          overrideValue: '',
+          isSection: true
+        });
+        
+        processSection(sectionName, sectionData, 1);
+      });
+    }
+
+    return rows;
+  };
+
+  const formatLabel = (key: string): string => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  };
+
+  // Load data from JSON
+  useEffect(() => {
+    const loadData = async () => {
+      setIsDataLoading(true);
+      try {
+        const response = await fetch(DATA_PATH);
+        if (!response.ok) {
+          throw new Error(`Failed to load data: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setTextractData([data]);
+        const flattenedFields = flattenData(data);
+        setTotalFields(flattenedFields.length);
+        
+        setIsDataLoading(false);
+        setDataError('');
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setDataError(error instanceof Error ? error.message : 'Failed to load data');
+        setIsDataLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Load and render PDF with validation
+  useEffect(() => {
+    const loadPdf = async () => {
+      try {
+        const checkResponse = await fetch(PDF_PATH, { method: 'HEAD' });
+        
+        if (!checkResponse.ok) {
+          throw new Error(`PDF not found: ${checkResponse.status}`);
+        }
+
+        const loadingTask = pdfjsLib.getDocument({
+          url: PDF_PATH,
+          useWorkerFetch: false,
+          isEvalSupported: false,
+          useSystemFonts: true,
+        });
+
+        const pdf = await loadingTask.promise;
+        pdfDocRef.current = pdf;
+        setTotalPages(pdf.numPages);
+
+        const page = await pdf.getPage(1);
+        const naturalWidth = page.view[2];
+        const naturalHeight = page.view[3];
+        setNaturalPageSize({ width: naturalWidth, height: naturalHeight });
+
+        const container = containerRef.current;
+        if (!container) return;
+        
+        const { width: clientWidth } = container.getBoundingClientRect();
+        const availableWidth = clientWidth - 40;
+        const calculatedBaseScale = availableWidth / naturalWidth;
+        setBaseScale(calculatedBaseScale);
+        
+        setIsPdfLoading(false);
+        setPdfError('');
+      } catch (error: any) {
+        console.error('Error loading PDF:', error);
+        
+        let errorMessage = 'Failed to load PDF';
+        
+        if (error.name === 'InvalidPDFException') {
+          errorMessage = `Invalid PDF file at ${PDF_PATH}`;
+        } else if (error.message.includes('404') || error.message.includes('not found')) {
+          errorMessage = `PDF file not found at ${PDF_PATH}`;
+        } else {
+          errorMessage = error.message || 'Unknown error loading PDF';
+        }
+        
+        setPdfError(errorMessage);
+        setIsPdfLoading(false);
+      }
+    };
+
+    loadPdf();
+  }, []);
+
+  // Render all PDF pages
+  const renderAllPDFPages = async () => {
+    if (!pdfDocRef.current || !containerRef.current) return;
+
+    Object.values(renderTasksRef.current).forEach((task) => {
+      if (task && task.cancel) task.cancel();
+    });
+    renderTasksRef.current = {};
+
+    try {
+      const currentScale = baseScale * zoom;
+      const newRenderedPages: Record<number, any> = {};
+
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const page = await pdfDocRef.current.getPage(pageNum);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { alpha: false });
+        const viewport = page.getViewport({ scale: currentScale * DPI_SCALE });
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        context!.fillStyle = 'white';
+        context!.fillRect(0, 0, canvas.width, canvas.height);
+
+        const displayWidth = viewport.width / DPI_SCALE;
+        const displayHeight = viewport.height / DPI_SCALE;
+
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+        canvas.style.display = 'block';
+        canvas.style.marginBottom = '16px';
+        canvas.style.border = '1px solid #E5E7EB';
+        canvas.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+        canvas.style.backgroundColor = 'white';
+        canvas.style.borderRadius = '8px';
+
+        const renderTask = page.render({
+          canvasContext: context!,
+          viewport,
+        });
+
+        renderTasksRef.current[pageNum] = renderTask;
+
+        try {
+          await renderTask.promise;
+          newRenderedPages[pageNum] = {
+            canvas,
+            viewport,
+            pageHeight: displayHeight,
+            pageWidth: displayWidth,
+            displayScale: currentScale,
+          };
+        } catch (error: any) {
+          if (error.name !== 'RenderingCancelledException') {
+            console.error('Rendering error:', error);
+          }
+        }
+      }
+
+      setRenderedPages(newRenderedPages);
+    } catch (error) {
+      console.error('Error rendering PDF:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (baseScale && pdfDocRef.current && totalPages > 0) {
+      const timeoutId = setTimeout(() => {
+        renderAllPDFPages();
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [zoom, baseScale, totalPages]);
+
+  useEffect(() => {
+    if (pagesContainerRef.current && Object.keys(renderedPages).length > 0) {
+      pagesContainerRef.current.innerHTML = '';
+
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const pageData = renderedPages[pageNum];
+        if (pageData) {
+          pagesContainerRef.current.appendChild(pageData.canvas);
+        }
+      }
+    }
+  }, [renderedPages, totalPages]);
+
+  // Handle row click
+  const handleRowClick = (record: TableRow) => {
+    if (record.isSection) return;
+
+    setSelectedField(record);
+    
+    if (record.boundingBox && record.page) {
+      setHighlightBox({
+        ...record.boundingBox,
+        page: record.page,
+        confidenceScore: getHighlightColor(record.confidence),
+      });
+      
+      setCurrentPage(record.page);
+      setTimeout(() => scrollToHighlight(record.boundingBox!, record.page), 200);
+    } else {
+      setHighlightBox(null);
+    }
+  };
+
+  // Scroll to highlight
+  const scrollToHighlight = (bbox: BoundingBox, targetPage: number) => {
+    if (!pdfScrollRef.current || !renderedPages[targetPage]) return;
+
+    const currentScale = baseScale * zoom;
+    const pageData = renderedPages[targetPage];
+    if (!pageData) return;
+
+    let cumulativeHeight = 0;
+    for (let i = 1; i < targetPage; i++) {
+      const prevPageData = renderedPages[i];
+      if (prevPageData) {
+        cumulativeHeight += prevPageData.pageHeight + 16;
+      }
+    }
+
+    const canvasWidth = naturalPageSize.width * currentScale;
+    const canvasHeight = naturalPageSize.height * currentScale;
+
+    const left = bbox.Left * canvasWidth;
+    const top = bbox.Top * canvasHeight;
+    const boxWidth = bbox.Width * canvasWidth;
+    const boxHeight = bbox.Height * canvasHeight;
+
+    const highlightCenterY = top + boxHeight / 2;
+    const absoluteHighlightY = cumulativeHeight + highlightCenterY;
+
+    const scrollContainer = pdfScrollRef.current;
+    const containerHeight = scrollContainer.getBoundingClientRect().height;
+
+    const scrollTop = Math.max(0, absoluteHighlightY - containerHeight / 2);
+
+    scrollContainer.scrollTo({
+      top: scrollTop,
+      behavior: 'smooth',
+    });
+  };
+
+  // Render highlight box
+  const renderHighlightBox = () => {
+    if (!highlightBox || Object.keys(renderedPages).length === 0 || !highlightBox.page) {
+      return null;
+    }
+
+    const targetPage = highlightBox.page;
+    const pageData = renderedPages[targetPage];
+
+    if (!pageData) return null;
+
+    let cumulativeHeight = 0;
+    for (let i = 1; i < targetPage; i++) {
+      const prevPageData = renderedPages[i];
+      if (prevPageData) {
+        cumulativeHeight += prevPageData.pageHeight + 16;
+      }
+    }
+
+    const currentScale = baseScale * zoom;
+    const canvasWidth = naturalPageSize.width * currentScale;
+    const canvasHeight = naturalPageSize.height * currentScale;
+
+    const left = highlightBox.Left * canvasWidth;
+    const top = highlightBox.Top * canvasHeight;
+    const boxWidth = highlightBox.Width * canvasWidth;
+    const boxHeight = highlightBox.Height * canvasHeight;
+    const absoluteTop = cumulativeHeight + top;
+
+    const borderColor = highlightBox.confidenceScore;
+
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading document data...</p>
+      <div
+        className="absolute pointer-events-none border-[3px] animate-pulse transition-all rounded"
+        style={{
+          left: `${left - 4}px`,
+          top: `${absoluteTop - 4}px`,
+          width: `${boxWidth + 8}px`,
+          height: `${boxHeight + 8}px`,
+          borderColor: borderColor,
+          backgroundColor: `${borderColor}20`,
+          zIndex: 30,
+        }}
+      >
+        {selectedField && (
+          <div className="absolute -top-9 left-0 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap">
+            <span className="flex items-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {selectedField.field}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Handle review change
+  const handleReviewChange = (checked: boolean, record: TableRow) => {
+    setRowEdits((prev) => ({
+      ...prev,
+      [record.key]: {
+        review: checked,
+        overrideValue: prev[record.key]?.overrideValue || record.value || '',
+      },
+    }));
+  };
+
+  // Handle override change
+  const handleOverrideChange = (value: string, record: TableRow) => {
+    setRowEdits((prev) => ({
+      ...prev,
+      [record.key]: {
+        review: true,
+        overrideValue: value,
+      },
+    }));
+  };
+
+  // Export data
+  const handleExportData = () => {
+    const exportData = textractData[0];
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'extracted-data.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Build table rows
+  const buildTableRows = (): TableRow[] => {
+    if (!textractData || textractData.length === 0) return [];
+    return flattenData(textractData[0]);
+  };
+
+  // Filter rows
+  const getFilteredRows = (): TableRow[] => {
+    const allRows = buildTableRows();
+    
+    return allRows.filter((row) => {
+      const searchLower = searchText.toLowerCase();
+      const matchesSearch = !searchText ||
+        row.field.toLowerCase().includes(searchLower) ||
+        row.value.toLowerCase().includes(searchLower);
+
+      if (row.isSection) return matchesSearch;
+      
+      const score = row.confidence;
+      let matchesConfidence = true;
+
+      if (confidenceFilter !== 'all' && score !== null) {
+        switch (confidenceFilter) {
+          case 'below_50':
+            matchesConfidence = score < 50;
+            break;
+          case '50_75':
+            matchesConfidence = score >= 50 && score < 75;
+            break;
+          case '75_80':
+            matchesConfidence = score >= 75 && score < 80;
+            break;
+          case '80_85':
+            matchesConfidence = score >= 80 && score < 85;
+            break;
+          case '85_90':
+            matchesConfidence = score >= 85 && score < 90;
+            break;
+          case '90_above':
+            matchesConfidence = score >= 90;
+            break;
+        }
+      }
+
+      return matchesSearch && matchesConfidence;
+    });
+  };
+
+  const filteredRows = getFilteredRows();
+
+  // Loading state
+  if (isPdfLoading || isDataLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center max-w-md bg-white p-8 rounded-2xl shadow-xl">
+          <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-cyan-600 mx-auto mb-6"></div>
+          <p className="text-xl font-bold text-gray-800 mb-3">Loading Document Review</p>
+          <div className="space-y-2 text-sm text-gray-600">
+            <p className={`flex items-center justify-center gap-2 ${isPdfLoading ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}`}>
+              {isPdfLoading ? '⏳ Loading PDF...' : '✅ PDF loaded'}
+            </p>
+            <p className={`flex items-center justify-center gap-2 ${isDataLoading ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}`}>
+              {isDataLoading ? '⏳ Loading extracted data...' : '✅ Data loaded'}
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
-  const allFields = flattenData(documentData.sections);
-  const groupedFields = groupFieldsBySection(allFields);
-  
-  const filteredFields = allFields.filter((field) =>
-    field.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    String(field.data.value).toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const displayFields = searchQuery
-    ? filteredFields
-    : selectedSection === 'all'
-    ? allFields
-    : groupedFields[selectedSection] || [];
-
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Document Review</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {documentData.documentType} • Total Fields: {allFields.length}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">
-            {allFields.filter((f) => f.data.confidence && f.data.confidence >= 95).length} High Confidence
-          </span>
-          <span className="text-sm text-gray-600">•</span>
-          <span className="text-sm text-gray-600">
-            {allFields.filter((f) => f.data.confidence && f.data.confidence < 85).length} Needs Review
-          </span>
-        </div>
-      </header>
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-2/5 bg-white border-r border-gray-200 flex flex-col h-full">
-          <div className="p-4 border-b border-gray-200 space-y-3 flex-shrink-0">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search fields..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <button
-                onClick={() => setSelectedSection('all')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap ${
-                  selectedSection === 'all'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                All Fields
-              </button>
-              {Object.keys(groupedFields).map((section) => (
-                <button
-                  key={section}
-                  onClick={() => setSelectedSection(section)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap ${
-                    selectedSection === section
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {formatLabel(section)} ({groupedFields[section].length})
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="divide-y divide-gray-100">
-              {displayFields.map((field, index) => (
-                <div
-                  key={field.path}
-                  onClick={() => handleFieldClick(field)}
-                  className={`p-3 cursor-pointer transition-colors ${
-                    selectedField?.path === field.path
-                      ? 'bg-blue-50 border-l-4 border-blue-600'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">
-                          {field.label}
-                        </h3>
-                        {field.data.boundingBox && (
-                          <span className="flex-shrink-0 text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                            P{field.data.page}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {editMode === field.path ? (
-                        <div className="flex gap-2 mt-2">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            autoFocus
-                          />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleSaveEdit(field.path); }}
-                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }}
-                            className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm text-gray-700 truncate flex-1">{String(field.data.value)}</p>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleEditClick(field.path, field.data.value); }}
-                            className="flex-shrink-0 text-blue-600 hover:text-blue-700"
-                          >
-                            {/* Edit Icon */}
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {field.data.confidence !== null && (
-                      <div className={`ml-2 flex-shrink-0 ${getConfidenceBgColor(field.data.confidence)} px-2 py-0.5 rounded`}>
-                        <span className={`text-xs font-medium ${getConfidenceColor(field.data.confidence)}`}>
-                          {field.data.confidence.toFixed(0)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="w-3/5 bg-gray-100 flex flex-col h-full">
-          <div className="p-4 bg-white border-b border-gray-200 flex-shrink-0">
-            <div className="flex items-center justify-between">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-md">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
               <div>
-                <h2 className="text-lg font-medium text-gray-900">Document Preview</h2>
-                {selectedField && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Viewing: {selectedField.label}
-                  </p>
-                )}
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-cyan-700 bg-clip-text text-transparent">
+                  Document Review
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Review and validate extracted document data
+                </p>
               </div>
-              {numPages > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <span className="text-sm text-gray-700">Page {currentPage} of {numPages}</span>
-                  <button
-                    onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
-                    disabled={currentPage === numPages}
-                    className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+            </div>
+            <button
+              onClick={handleExportData}
+              className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-lg hover:from-cyan-700 hover:to-cyan-800 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12" />
+              </svg>
+              Export Data
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden gap-4 p-4">
+        {/* Left Panel - Extracted Data Table */}
+        <div className="w-[58%] bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden">
+          {/* Filters */}
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-shrink-0">
+                <select
+                  value={confidenceFilter}
+                  onChange={(e) => setConfidenceFilter(e.target.value)}
+                  className="pl-4 pr-10 py-2.5 text-sm font-medium border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white shadow-sm appearance-none cursor-pointer hover:border-gray-400 transition-colors"
+                >
+                  <option value="all">All Confidence %</option>
+                  <option value="below_50">Below 50%</option>
+                  <option value="50_75">50% - 75%</option>
+                  <option value="75_80">75% - 80%</option>
+                  <option value="80_85">80% - 85%</option>
+                  <option value="85_90">85% - 90%</option>
+                  <option value="90_above">90% & Above</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
-              )}
+              </div>
+
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search extracted data..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent shadow-sm hover:border-gray-400 transition-colors"
+                />
+              </div>
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-4 flex justify-center bg-gray-200">
-            <div
-              ref={documentViewerRef}
-              className="relative bg-white shadow-lg"
-              style={{
-                height: 'calc(100vh - 180px)',
-                aspectRatio: '0.7727',
-                width: 'auto'
-              }}
-            >
-              <iframe
-                src={`${pdfUrl}#page=${currentPage}&view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
-                className="w-full h-full border-none"
-                title="PDF Document"
-              />
-              <div className="absolute inset-0 pointer-events-none">
-                {selectedField?.data.boundingBox && selectedField.data.page === currentPage && (
-                  <div
-                    className="absolute border-2 border-blue-600 bg-blue-500 bg-opacity-25 z-20"
-                    style={{
-                      left: `${selectedField.data.boundingBox.Left * 100}%`,
-                      top: `${selectedField.data.boundingBox.Top * 100}%`,
-                      width: `${selectedField.data.boundingBox.Width * 100}%`,
-                      height: `${selectedField.data.boundingBox.Height * 100}%`,
-                    }}
-                  >
-                    <div className="absolute -top-7 left-0 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow whitespace-nowrap z-30">
-                      {selectedField.label}
-                    </div>
-                  </div>
-                )}
-                {allFields
-                  .filter((f) => f.data.boundingBox && f.data.page === currentPage)
-                  .map((field, idx) => (
-                    <div
-                      key={idx}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleFieldClick(field);
-                      }}
-                      className={`absolute cursor-pointer transition-all z-10 pointer-events-auto ${
-                        selectedField?.path === field.path 
-                          ? 'opacity-0'
-                          : 'border border-blue-400 bg-blue-200 bg-opacity-10 hover:bg-opacity-30 hover:border-blue-600'
-                      }`}
-                      style={{
-                        left: `${field.data.boundingBox!.Left * 100}%`,
-                        top: `${field.data.boundingBox!.Top * 100}%`,
-                        width: `${field.data.boundingBox!.Width * 100}%`,
-                        height: `${field.data.boundingBox!.Height * 100}%`,
-                      }}
-                      title={field.label}
-                    />
-                  ))}
+
+          {/* Table */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            <table className="w-full border-collapse text-sm">
+              <thead className="bg-gradient-to-r from-cyan-50 to-cyan-100 sticky top-0 z-10 shadow-sm">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[20%]">
+                    Document Provision
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[20%]">
+                    Extracted Value
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[10%]">
+                    Confidence
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[8%]">
+                    Review
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[22%]">
+                    Override Value
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {filteredRows.map((record) => {
+                  if (record.isSection) {
+                    return (
+                      <tr key={record.key} className="bg-gradient-to-r from-gray-50 to-gray-100">
+                        <td colSpan={5} className="px-4 py-3 font-bold text-cyan-900 text-sm border-l-4 border-cyan-500">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            {record.field}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  const editState = rowEdits[record.key];
+                  const isReviewed = editState?.review || false;
+                  const overrideValue = editState?.overrideValue || record.value;
+
+                  return (
+                    <tr
+                      key={record.key}
+                      onClick={() => handleRowClick(record)}
+                      className={`cursor-pointer transition-all duration-150 ${
+                        getConfidenceBg(record.confidence)
+                      } ${selectedField?.key === record.key ? 'bg-cyan-50 border-l-4 border-l-cyan-600 shadow-md' : 'hover:bg-gray-50 border-l-4 border-l-transparent'}`}
+                    >
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.field}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{record.value}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${getConfidenceColor(record.confidence)} ${
+                          record.confidence !== null && record.confidence >= 95 ? 'bg-emerald-100' :
+                          record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
+                          record.confidence !== null ? 'bg-red-100' : 'bg-gray-100'
+                        }`}>
+                          {record.confidencePercent !== '-' ? `${record.confidencePercent}%` : '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isReviewed}
+                          onChange={(e) => handleReviewChange(e.target.checked, record)}
+                          className="w-4.5 h-4.5 text-cyan-600 rounded border-2 border-gray-300 focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          disabled={!isReviewed}
+                          value={overrideValue}
+                          onChange={(e) => handleOverrideChange(e.target.value, record)}
+                          placeholder="Override value"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors shadow-sm"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Right Panel - PDF Viewer */}
+        <div className="w-[42%] bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden">
+          {/* Document Header */}
+          <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  Document
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5">Total Pages: {totalPages}</p>
               </div>
+            </div>
+
+            {/* Zoom Controls */}
+           <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-200 shadow-sm text-xs">
+  <div className="flex items-center gap-1 font-semibold text-gray-700">
+    <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded">
+      {String(currentPage).padStart(2, '0')}
+    </span>
+    <span className="text-gray-400">/</span>
+    <span className="text-gray-600">
+      {String(totalPages).padStart(2, '0')}
+    </span>
+  </div>
+  
+  <div className="flex-1 flex items-center gap-2">
+    <button
+      onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
+      disabled={zoom <= 0.25}
+      className="p-1.5 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+      </svg>
+    </button>
+
+    <div className="flex-1 flex items-center gap-1">
+      <input
+        type="range"
+        min="0.25"
+        max="4"
+        step="0.25"
+        value={zoom}
+        onChange={(e) => setZoom(Number(e.target.value))}
+        className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-600"
+      />
+      <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-gray-100 rounded">
+        {Math.round(zoom * 100)}%
+      </span>
+    </div>
+
+    <button
+      onClick={() => setZoom((prev) => Math.min(prev + 0.25, 4))}
+      disabled={zoom >= 4}
+      className="p-1.5 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+  </div>
+
+  <button className="px-2 py-1.5 bg-cyan-600 text-white text-[10px] font-semibold rounded-md hover:bg-cyan-700 transition flex items-center gap-1">
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+    Download
+  </button>
+</div>
+
+          </div>
+
+          {/* PDF Viewer */}
+          <div ref={pdfScrollRef} className="flex-1 overflow-auto p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+            <div ref={containerRef} className="relative">
+              <div ref={pagesContainerRef} className="relative" />
+              {renderHighlightBox()}
             </div>
           </div>
         </div>

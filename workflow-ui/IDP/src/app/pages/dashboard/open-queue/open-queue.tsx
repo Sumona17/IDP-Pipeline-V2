@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import openQueueData from '../../../../../public/data/openQueueData.json';
 import { useNavigate } from 'react-router-dom';
+import { useGlobalSort } from "../../../utils/global-sort";
 
 interface QueueDocument {
   id: string;
@@ -30,7 +31,7 @@ const OpenQueue: React.FC = () => {
   const documentSources = ['All', ...Array.from(new Set(documents.map(doc => doc.documentSource)))];
   const statuses = ['All', ...Array.from(new Set(documents.map(doc => doc.status)))];
   const lobs = ['All', ...Array.from(new Set(documents.map(doc => doc.productLOB)))];
-
+  
   // Reset all filters
   const resetFilters = () => {
     setSearchTerm('');
@@ -57,12 +58,16 @@ const OpenQueue: React.FC = () => {
       return matchesSearch && matchesSource && matchesStatus && matchesLOB;
     });
   }, [documents, searchTerm, sourceFilter, statusFilter, lobFilter]);
+  const { sortedData, SortHeader } = useGlobalSort(filteredDocuments);
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  // const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentDocuments = filteredDocuments.slice(startIndex, endIndex);
+  // const currentDocuments = filteredDocuments.slice(startIndex, endIndex);
+  const currentDocuments = sortedData.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -192,7 +197,8 @@ const OpenQueue: React.FC = () => {
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Customer Name</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Broker Name</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[12%]">Email Subject</th>
-                  <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Date Received</th>
+                  {/* <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Date Received</th> */}
+                    <SortHeader columnKey="dateReceived" label="Date Received" className="w-[10%]" />
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[8%]">Source</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[8%]">Status</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Actions</th>

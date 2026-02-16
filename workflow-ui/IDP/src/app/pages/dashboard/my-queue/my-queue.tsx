@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import myQueueData from '../../../../../public/data/myQueueData.json';
+import { useGlobalSort } from "../../../utils/global-sort";
+
 
 interface QueueSubmission {
   submissionId: string;
@@ -55,12 +57,16 @@ const MyQueue: React.FC = () => {
       return matchesSearch && matchesStatus && matchesLOB && matchesPriority;
     });
   }, [submissions, searchTerm, statusFilter, lobFilter, priorityFilter]);
+  const { sortedData, SortHeader } = useGlobalSort(filteredSubmissions);
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
+  // const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentSubmissions = filteredSubmissions.slice(startIndex, endIndex);
+  // const currentSubmissions = filteredSubmissions.slice(startIndex, endIndex);
+const currentSubmissions = sortedData.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -190,8 +196,10 @@ const MyQueue: React.FC = () => {
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[13%]">Customer Name</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[11%]">LOB</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Status</th>
-                  <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[11%]">Date Created</th>
-                  <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[11%]">Date Modified</th>
+                  {/* <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[11%]">Date Created</th>
+                  <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[11%]">Date Modified</th> */}
+                   <SortHeader columnKey="dateCreated" label="Date Created" className="w-[11%]" />
+                   <SortHeader columnKey="dateModified" label="Date Modified" className="w-[11%]" />
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[11%]">Broker</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[11%]">Created By</th>
                   <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase w-[8%]">Priority</th>
