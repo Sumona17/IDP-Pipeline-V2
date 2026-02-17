@@ -1,0 +1,104 @@
+{
+  "name": "3LATEST DOC",
+  "edges": [
+    {
+      "id": "edge-v30k37qd",
+      "label": "",
+      "source": "start-zvi13tzk",
+      "target": "task-jzmduj4v"
+    },
+    {
+      "id": "edge-xgjogq6f",
+      "label": "",
+      "source": "task-jzmduj4v",
+      "target": "task-njgl43fw"
+    },
+    {
+      "id": "edge-foem4mlm",
+      "label": "",
+      "source": "task-njgl43fw",
+      "target": "task-lickzlke"
+    },
+    {
+      "id": "edge-zaqlrjgf",
+      "label": "",
+      "source": "task-lickzlke",
+      "target": "end-leuzfl0l"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start-zvi13tzk",
+      "data": {
+        "label": "Start"
+      },
+      "type": "start",
+      "position": {
+        "x": 507.5,
+        "y": 59
+      }
+    },
+    {
+      "id": "task-jzmduj4v",
+      "data": {
+        "label": "DOCUMENT_WATCHER",
+        "value": "",
+        "assignee": "",
+        "function": "execute_lambda",
+        "valueType": "static",
+        "description": ""
+      },
+      "type": "task",
+      "position": {
+        "x": 565,
+        "y": 142.5
+      }
+    },
+    {
+      "id": "task-njgl43fw",
+      "data": {
+        "label": "DOCUMENT_CLASSIFIER",
+        "value": "",
+        "assignee": "",
+        "function": "execute_lambda",
+        "valueType": "static",
+        "description": ""
+      },
+      "type": "task",
+      "position": {
+        "x": 666.6165168988837,
+        "y": 210.93367422173336
+      }
+    },
+    {
+      "id": "task-lickzlke",
+      "data": {
+        "label": "DOCUMENT_INGESTION",
+        "value": "",
+        "assignee": "",
+        "function": "execute_lambda",
+        "valueType": "static",
+        "description": ""
+      },
+      "type": "task",
+      "position": {
+        "x": 592.2961574562047,
+        "y": 290.8317529498357
+      }
+    },
+    {
+      "id": "end-leuzfl0l",
+      "data": {
+        "label": "End"
+      },
+      "type": "end",
+      "position": {
+        "x": 602.4336742217334,
+        "y": 361.0081913873272
+      }
+    }
+  ],
+  "version": "1.0.0",
+  "workflowId": "3latest-doc",
+  "description": "Created via Workflow Designer"
+}

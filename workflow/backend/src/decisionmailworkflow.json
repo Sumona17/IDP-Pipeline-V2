@@ -1,0 +1,148 @@
+{
+  "workflowId": "my-workflow",
+  "name": "My Workflow",
+  "description": "Created via Workflow Designer",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "start-qi5jngyv",
+      "type": "start",
+      "position": {
+        "x": 526.6927943199047,
+        "y": -55.245694526707084
+      },
+      "data": {
+        "label": "Start"
+      }
+    },
+    {
+      "id": "task-hiu60i7m",
+      "type": "task",
+      "position": {
+        "x": 484.46854117517216,
+        "y": 64.82952535362631
+      },
+      "data": {
+        "label": "v",
+        "assignee": "",
+        "description": "",
+        "value": "10",
+        "valueType": "static",
+        "function": "",
+        "sender": "",
+        "recipient": "",
+        "objective": ""
+      }
+    },
+    {
+      "id": "gateway-q23ouvwt",
+      "type": "gateway",
+      "position": {
+        "x": 517.4562389444944,
+        "y": 174.34868194777658
+      },
+      "data": {
+        "label": "Decision",
+        "decisionRules": [
+          {
+            "id": "row-1770024837535",
+            "condition": "v > 10",
+            "output": "approved"
+          },
+          {
+            "id": "row-1770024848091",
+            "condition": "v <= 10",
+            "output": "rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "task-5n3egk41",
+      "type": "task",
+      "position": {
+        "x": 368.35184502715754,
+        "y": 323.45307586511365
+      },
+      "data": {
+        "label": "Approved Task",
+        "assignee": "",
+        "description": "",
+        "value": "",
+        "valueType": "static",
+        "function": "",
+        "sender": "",
+        "recipient": "",
+        "objective": ""
+      }
+    },
+    {
+      "id": "task-t4a92yto",
+      "type": "task",
+      "position": {
+        "x": 584.7511423939122,
+        "y": 324.7725837758866
+      },
+      "data": {
+        "label": "Rejected Task",
+        "assignee": "",
+        "description": "",
+        "value": "",
+        "valueType": "static",
+        "function": "",
+        "sender": "",
+        "recipient": "",
+        "objective": ""
+      }
+    },
+    {
+      "id": "end-aemoj4qb",
+      "type": "end",
+      "position": {
+        "x": 514.8172231229487,
+        "y": 429.0137087269452
+      },
+      "data": {
+        "label": "End"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-6agzza69",
+      "source": "start-qi5jngyv",
+      "target": "task-hiu60i7m",
+      "label": ""
+    },
+    {
+      "id": "edge-0cuv4is8",
+      "source": "task-hiu60i7m",
+      "target": "gateway-q23ouvwt",
+      "label": ""
+    },
+    {
+      "id": "edge-gxpm2u32",
+      "source": "gateway-q23ouvwt",
+      "target": "task-5n3egk41",
+      "label": "approved"
+    },
+    {
+      "id": "edge-d4zl9epx",
+      "source": "gateway-q23ouvwt",
+      "target": "task-t4a92yto",
+      "label": "rejected"
+    },
+    {
+      "id": "edge-pihmsl6b",
+      "source": "task-5n3egk41",
+      "target": "end-aemoj4qb",
+      "label": ""
+    },
+    {
+      "id": "edge-yj79kjmv",
+      "source": "task-t4a92yto",
+      "target": "end-aemoj4qb",
+      "label": ""
+    }
+  ]
+}

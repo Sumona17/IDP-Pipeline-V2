@@ -1,0 +1,65 @@
+{
+  "name": "Test Post Method",
+  "edges": [
+    {
+      "id": "edge-oh6k8k63",
+      "label": "",
+      "source": "start-7t6teauc",
+      "target": "task-n8os7l1w"
+    },
+    {
+      "id": "edge-uch9zkkl",
+      "label": "",
+      "source": "task-n8os7l1w",
+      "target": "end-9t7yqt5r"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start-7t6teauc",
+      "data": {
+        "label": "Start"
+      },
+      "type": "start",
+      "position": {
+        "x": 492.5,
+        "y": 37
+      }
+    },
+    {
+      "id": "task-n8os7l1w",
+      "data": {
+        "url": "",
+        "body": "{   \"id\": 101,   \"title\": \"foo\",   \"body\": \"bar\",   \"userId\": 1 }",
+        "port": "",
+        "label": "Save Post",
+        "value": "",
+        "method": "POST",
+        "assignee": "",
+        "endpoint": "https://jsonplaceholder.typicode.com/posts",
+        "function": "api_call",
+        "valueType": "static",
+        "description": ""
+      },
+      "type": "task",
+      "position": {
+        "x": 565,
+        "y": 142.5
+      }
+    },
+    {
+      "id": "end-9t7yqt5r",
+      "data": {
+        "label": "End"
+      },
+      "type": "end",
+      "position": {
+        "x": 559.5,
+        "y": 233
+      }
+    }
+  ],
+  "version": "1.0.0",
+  "workflowId": "test-post-method",
+  "description": "Created via Workflow Designer"
+}
