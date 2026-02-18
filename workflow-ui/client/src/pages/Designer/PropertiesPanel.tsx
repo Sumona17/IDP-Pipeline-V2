@@ -17,7 +17,7 @@ type Props = {
 export const PropertiesPanel = ({ node, edge, updateNode, updateEdge }: Props) => {
   if (!node && !edge) {
     return (
-      <div className="w-80 border-l p-4 bg-gray-50 h-full overflow-y-auto overflow-x-hidden flex-shrink-0">
+      <div className="w-full md:w-80 border-t md:border-l p-4 bg-gray-50 h-full overflow-y-auto overflow-x-hidden flex-shrink-0">
         <div className="text-center text-gray-500 py-8">
           <p className="text-sm">Select a node or edge to edit properties</p>
         </div>
@@ -32,7 +32,7 @@ export const PropertiesPanel = ({ node, edge, updateNode, updateEdge }: Props) =
     };
 
     return (
-      <div key={edge.id} className="w-80 border-l p-6 space-y-6 bg-white h-full overflow-y-auto overflow-x-hidden flex-shrink-0">
+      <div key={edge.id} className="w-full md:w-80 border-t md:border-l p-6 space-y-6 bg-white h-full overflow-y-auto overflow-x-hidden flex-shrink-0">
         <div>
           <h3 className="font-bold text-gray-900 mb-1">Edge Properties</h3>
           <p className="text-xs text-gray-500">Edit connection settings</p>
@@ -73,7 +73,7 @@ export const PropertiesPanel = ({ node, edge, updateNode, updateEdge }: Props) =
   };
 
   return (
-    <div key={node.id} className="w-80 border-l p-6 space-y-6 bg-white h-full overflow-y-auto overflow-x-hidden flex-shrink-0">
+    <div key={node.id} className="w-full md:w-80 border-t md:border-l p-6 space-y-6 bg-white h-full overflow-y-auto overflow-x-hidden flex-shrink-0">
       <div>
         <h3 className="font-bold text-gray-900 mb-1">Properties</h3>
         <p className="text-xs text-gray-500">Edit node settings below</p>
@@ -158,6 +158,8 @@ export const PropertiesPanel = ({ node, edge, updateNode, updateEdge }: Props) =
               <option value="">Select Function</option>
               <option value="send_email">Send Email</option>
               <option value="api_call">API Call</option>
+              <option value="human_driven">Human Driven</option>
+              <option value="execute_lambda">execute_lambda</option>
             </select>
           </div>
 
