@@ -151,9 +151,13 @@ export const WorkflowDesigner = () => {
   useEffect(() => {
     const incomingWorkflow = (location.state as any)?.workflow;
     if (incomingWorkflow) {
+      localStorage.setItem('exists', 'true');
       setWorkflowObject(incomingWorkflow);
       applyWorkflowObject(incomingWorkflow);
       return;
+    }
+    else{
+      localStorage.setItem('exists', 'false');
     }
     applyWorkflowObject(workflowObject);
   }, [workflowObject, applyWorkflowObject, location.state]);
@@ -345,6 +349,13 @@ export const WorkflowDesigner = () => {
 
   const saveWorkflow = async () => {
 
+    const e = localStorage.getItem('exists');
+    const storedWorkflowId = localStorage.getItem('workflowId');
+
+    if(e === 'true'){
+      
+    }
+
     const validationErrors = validateWorkflow(nodes, edges);
     if (Object.keys(validationErrors).length > 0) {
       alert(
@@ -374,15 +385,32 @@ export const WorkflowDesigner = () => {
       "definitionJson": JSON.stringify(nextWorkflowObject)
     }
 
+    if (e === 'true' && storedWorkflowId) {
+      axios.put(`${import.meta.env.VITE_APP_BASE_URL}/${storedWorkflowId}`, objectToBeSaved)
+        .then((res) => {
+          console.log("Update response: ", res)
+          alert("Workflow updated successfully");
+          localStorage.setItem('exists', 'false');
+          localStorage.removeItem('workflowId');
+          navigate('/');
+        })
+        .catch((err) => {
+          console.log("Error updating workflow", err)
+        })
+      return;
+    }
+
     axios.post(`${import.meta.env.VITE_APP_BASE_URL}/save`,objectToBeSaved)
-    .then((res) => {
-      console.log("Saving response: ", res)
-      alert("Workflow saved successfully");
-      navigate('/');
-    })
-    .catch((err) => {
-      console.log("Error saving workflow",err)
-    })
+      .then((res) => {
+        console.log("Saving response: ", res)
+        alert("Workflow saved successfully");
+        localStorage.setItem('exists', 'false');
+        localStorage.removeItem('workflowId');
+        navigate('/');
+      })
+      .catch((err) => {
+        console.log("Error saving workflow",err)
+      })
   };
 
 
@@ -719,8 +747,10 @@ export const WorkflowDesigner = () => {
       </div>
 
       {/* Canvas + Properties */}
-      <div className="flex flex-1 overflow-hidden">
-        <ReactFlow
+      <div className="flex flex-1 flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 min-h-[360px]">
+          <ReactFlow
+            className="h-full w-full"
           nodes={nodes.map((n) => ({
             ...n,
             data: { ...n.data, error: errors[n.id], isExecuted: executedNodes.has(n.id) },
@@ -764,13 +794,14 @@ export const WorkflowDesigner = () => {
           <MiniMap />
           <Controls />
           <Background gap={16} />
-        </ReactFlow>
+          </ReactFlow>
+        </div>
 
         {/* Minimized Panel Toggle Button */}
         {isPanelMinimized && (
           <button
             onClick={() => setIsPanelMinimized(false)}
-            className="absolute right-4 bottom-4 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-lg"
+            className="fixed md:absolute right-4 bottom-4 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-lg"
             title="Expand properties panel"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -779,10 +810,10 @@ export const WorkflowDesigner = () => {
 
         {/* Properties Panel */}
         {!isPanelMinimized && (
-          <div className="relative">
+          <div className="relative w-full md:w-auto">
             <button
               onClick={() => setIsPanelMinimized(true)}
-              className="absolute -left-10 top-4 p-2 bg-gray-200 text-gray-700 rounded-l hover:bg-gray-300 transition"
+              className="hidden md:flex absolute -left-10 top-4 p-2 bg-gray-200 text-gray-700 rounded-l hover:bg-gray-300 transition"
               title="Minimize properties panel"
             >
               <ChevronRight className="w-4 h-4" />
