@@ -18,10 +18,22 @@ pnpm-lock.yaml
 # Build output
 dist/
 dist-ssr/
+workflows/workflow-backend/build/
+
+# Local infra/scripts (not tracked)
+infra/
+scripts/
 
 # Local env files
 *.local
 .env
+
+# Generated ECS task definition
+idp-middleware/ecs-taskdef.json
+
+# Workflow backend generated files
+workflows/workflow-backend/.gradle/
+workflows/workflow-backend/.properties
 
 # Editor directories and files
 .vscode/

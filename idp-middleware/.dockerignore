@@ -1,0 +1,11 @@
+.git
+.gitignore
+Dockerfile
+.env
+.env.*
+**/target
+**/.classpath
+**/.project
+**/.settings
+**/*.iml
+**/.idea
