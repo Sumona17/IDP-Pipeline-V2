@@ -38,5 +38,6 @@ export interface ExecutionInstance {
   status: string;
   startedAt: string;
   completedAt: string;
-  duration?: string;
+  durationFormatted?: string;
+  currentNodeName?: string;
 }

@@ -1,6 +1,6 @@
-import { Play, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+
 import type { ExecutionInstance } from "./types";
 import { getStatusBadge } from "./utils";
 

@@ -18,16 +18,14 @@ export const Dashboard = () => {
   const [autoRefresh, setAutoRefresh] = useState(
     localStorage.getItem("autoRefresh") === "true",
   );
-  const [refreshInterval, setRefreshInterval] = useState(
+  const [refreshInterval] = useState(
     parseInt(localStorage.getItem("refreshInterval") || "10", 10),
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dateFilter, setDateFilter] = useState("");
-  const [executingIds, setExecutingIds] = useState<Set<string>>(new Set());
-  const [executionResults, setExecutionResults] = useState<Record<string, any>>(
-    {},
-  );
+  const [executingIds] = useState<Set<string>>(new Set());
+  const [executionResults] = useState<Record<string, any>>({});
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(
     null,
   );
