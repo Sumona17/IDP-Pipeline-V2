@@ -69,8 +69,8 @@ const DocumentComparison: React.FC = () => {
   const CONFIDENCE_THRESHOLD = 70;
 
   // PDF path - can be configured
-  const PDF_PATH = '/document.pdf';
-  const DATA_PATH = '/data/comparedata.json';
+  const PDF_PATH = '/lossrun.pdf';
+  const DATA_PATH = '/data/lossRunData.json';
 
   // Format confidence score
   const formatConfidenceScore = (score: number | null): string => {
