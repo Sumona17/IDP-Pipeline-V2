@@ -18,7 +18,7 @@ export const StatisticsCards = ({ allInstances }: StatisticsCardsProps) => {
         <div className="text-3xl font-bold text-green-600 mt-2">
           {allInstances && allInstances.length > 0
             ? (
-                (allInstances.filter((i) => i.status === "COMPLETED").length /
+                (allInstances?.filter((i) => i.status === "COMPLETED").length /
                   allInstances.length) *
                 100
               ).toFixed(2)
