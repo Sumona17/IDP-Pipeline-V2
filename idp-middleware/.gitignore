@@ -1,0 +1,42 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# Local env files
+.env
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+.run
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+${project.build.directory}/classes
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+mvnw.cmd
+mvnw
+/.mvn
+ .vscode/settings.json
