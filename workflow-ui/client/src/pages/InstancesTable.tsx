@@ -76,7 +76,9 @@ export const InstancesTable = ({
                     {new Date(instance.startedAt).toLocaleString()}
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
-                    {new Date(instance.completedAt).toLocaleString()}
+                    {instance.completedAt != null
+                      ? new Date(instance.completedAt).toLocaleString()
+                      : "-"}
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
                     {instance.durationFormatted
