@@ -1,0 +1,243 @@
+{
+  "documentType": "Loss Run Report",
+  "sections": {
+    "header": {
+      "date": {
+        "value": "12/10/2025",
+        "confidence": 94.40825653076172,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.14366236329078674,
+          "Height": 0.009538907557725906,
+          "Left": 0.670574963092804,
+          "Top": 0.12528792023658752
+        }
+      },
+      "insuredName": {
+        "value": "Apex Landscaping Inc.",
+        "confidence": 94.51020812988281,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.30728447437286377,
+          "Height": 0.012163311243057251,
+          "Left": 0.1218908280134201,
+          "Top": 0.18608252704143524
+        }
+      },
+      "totalAmountPaid": {
+        "value": "$17,000",
+        "confidence": 93.44761657714844,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.23277975618839264,
+          "Height": 0.01154826395213604,
+          "Left": 0.6465018391609192,
+          "Top": 0.6305301189422607
+        }
+      }
+    },
+    "policy2023": {
+      "policyNumber": {
+        "value": "AIG-2023-12345",
+        "confidence": 94.43254852294922,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.2644507586956024,
+          "Height": 0.011927283369004726,
+          "Left": 0.1217421442270279,
+          "Top": 0.21397581696510315
+        }
+      },
+      "policyPeriod": {
+        "value": "01/01/2023 to 12/31/2023",
+        "confidence": 94.49950408935547,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.32785749435424805,
+          "Height": 0.011838896200060844,
+          "Left": 0.1217399463057518,
+          "Top": 0.24194370210170746
+        }
+      },
+      "uwYear": {
+        "value": "2023",
+        "confidence": 93.99686431884766,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.2644507586956024,
+          "Height": 0.011927283369004726,
+          "Left": 0.1217421442270279,
+          "Top": 0.21397581696510315
+        }
+      },
+      "carrier": {
+        "value": "AIG",
+        "confidence": 95.18021392822266,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.2644507586956024,
+          "Height": 0.011927283369004726,
+          "Left": 0.1217421442270279,
+          "Top": 0.21397581696510315
+        }
+      },
+      "effectiveDate": {
+        "value": "01/01/20 23",
+        "confidence": 94.96485900878906,
+        "page": 1,
+        "boundingBox": null
+      },
+      "expirationDate": {
+        "value": "12/31/202 3",
+        "confidence": 94.6817398071289,
+        "page": 1,
+        "boundingBox": null
+      },
+      "dateOfOccurrence": {
+        "value": "06/21/202 3",
+        "confidence": 93.8764877319336,
+        "page": 1,
+        "boundingBox": null
+      },
+      "dateOfClaim": {
+        "value": "06/25/202 3",
+        "confidence": 94.40453338623047,
+        "page": 1,
+        "boundingBox": null
+      },
+      "typeOfClaim": {
+        "value": "Property Damage - Electrical Equipment caught fire on a client's commercial property, causing minor damage to the room.",
+        "confidence": 92.34931182861328,
+        "page": 1,
+        "boundingBox": null
+      },
+      "line": {
+        "value": "Commer cial Property",
+        "confidence": 93.5713119506836,
+        "page": 1,
+        "boundingBox": null
+      },
+      "amountPaid": {
+        "value": "$7,000",
+        "confidence": 94.77379608154297,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.03964722901582718,
+          "Height": 0.00870469119399786,
+          "Left": 0.8099410533905029,
+          "Top": 0.30608561635017395
+        }
+      },
+      "claimOpen": {
+        "value": "N",
+        "confidence": 93.93312072753906,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.1964343786239624,
+          "Height": 0.016517868265509605,
+          "Left": 0.40246936678886414,
+          "Top": 0.09059726446866989
+        }
+      }
+    },
+    "policy2022": {
+      "policyNumber": {
+        "value": "AIG-2022-12345",
+        "confidence": 94.99834442138672,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.2643890380859375,
+          "Height": 0.01180261094123125,
+          "Left": 0.1217816099524498,
+          "Top": 0.4188247323036194
+        }
+      },
+      "policyPeriod": {
+        "value": "01/01/2022 to 12/31/2022",
+        "confidence": 94.64957427978516,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.3275085687637329,
+          "Height": 0.011847756803035736,
+          "Left": 0.12182819098234177,
+          "Top": 0.4469914436340332
+        }
+      },
+      "uwYear": {
+        "value": "2022",
+        "confidence": 94.81710052490234,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.2643890380859375,
+          "Height": 0.01180261094123125,
+          "Left": 0.1217816099524498,
+          "Top": 0.4188247323036194
+        }
+      },
+      "carrier": {
+        "value": "AIG",
+        "confidence": 95.12188720703125,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.2644507586956024,
+          "Height": 0.011927283369004726,
+          "Left": 0.1217421442270279,
+          "Top": 0.21397581696510315
+        }
+      },
+      "effectiveDate": {
+        "value": "01/01/20 22",
+        "confidence": 94.60364532470703,
+        "page": 1,
+        "boundingBox": null
+      },
+      "expirationDate": {
+        "value": "12/31/202 2",
+        "confidence": 94.18486022949219,
+        "page": 1,
+        "boundingBox": null
+      },
+      "dateOfOccurrence": {
+        "value": "09/01/202 2",
+        "confidence": 93.65843963623047,
+        "page": 1,
+        "boundingBox": null
+      },
+      "dateOfClaim": {
+        "value": "09/05/202 2",
+        "confidence": 93.69255828857422,
+        "page": 1,
+        "boundingBox": null
+      },
+      "typeOfClaim": {
+        "value": "Property Damage - Wall of the compound was damaged due to a vehicle impact",
+        "confidence": 92.93173217773438,
+        "page": 1,
+        "boundingBox": null
+      },
+      "line": {
+        "value": "Comm ercial Proper ty",
+        "confidence": 91.7574691772461,
+        "page": 1,
+        "boundingBox": null
+      },
+      "amountPaid": {
+        "value": "$10,0 00",
+        "confidence": 86.9062271118164,
+        "page": 1,
+        "boundingBox": null
+      },
+      "claimOpen": {
+        "value": "N",
+        "confidence": 93.59184265136719,
+        "page": 1,
+        "boundingBox": {
+          "Width": 0.1964343786239624,
+          "Height": 0.016517868265509605,
+          "Left": 0.40246936678886414,
+          "Top": 0.09059726446866989
+        }
+      }
+    }
+  }
+}
