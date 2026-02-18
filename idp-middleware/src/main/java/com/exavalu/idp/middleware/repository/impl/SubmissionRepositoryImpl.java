@@ -1,7 +1,7 @@
 package com.exavalu.idp.middleware.repository.impl;
 
-import com.exavalu.idp.middleware.dto.SubmissionDocumentInfo;
-import com.exavalu.idp.middleware.dto.SubmissionSummary;
+import com.exavalu.idp.middleware.dto.SubmissionDocumentInfoResponseDto;
+import com.exavalu.idp.middleware.dto.SubmissionSummaryResponseDto;
 import com.exavalu.idp.middleware.repository.SubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.exavalu.idp.middleware.utility.FileSizeUtil.formatFileSize;
+
 
 @Repository
 @RequiredArgsConstructor
@@ -29,7 +31,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     private String tableName;
 
     @Override
-    public List<SubmissionSummary> fetchPendingSubmissions() {
+    public List<SubmissionSummaryResponseDto> fetchPendingSubmissions() {
 
         log.info("Table name: {}", tableName);
 
@@ -54,7 +56,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     }
 
     @Override
-    public List<SubmissionDocumentInfo> fetchDocumentsBySubmissionId(String submissionId) {
+    public List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId) {
 
         GetItemRequest request = GetItemRequest.builder()
                 .tableName(tableName)
@@ -75,7 +77,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     }
 
     @Override
-    public List<SubmissionSummary> fetchSubmissionsByIds(List<String> submissionIds) {
+    public List<SubmissionSummaryResponseDto> fetchSubmissionsByIds(List<String> submissionIds) {
 
         if (submissionIds == null || submissionIds.isEmpty()) {
             return Collections.emptyList();
@@ -112,10 +114,10 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     }
 
 
-    private SubmissionSummary mapToSubmissionSummary(
+    private SubmissionSummaryResponseDto mapToSubmissionSummary(
             Map<String, AttributeValue> item) {
 
-        return SubmissionSummary.builder()
+        return SubmissionSummaryResponseDto.builder()
                 .submissionId(getString(item, "submissionId"))
                 .createdAt(getString(item, "createdAt"))
                 .incomingPath(getString(item, "incomingPath"))
@@ -124,19 +126,20 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                 .build();
     }
 
-    private List<SubmissionDocumentInfo> mapToSubmissionFileInfoList(
+    private List<SubmissionDocumentInfoResponseDto> mapToSubmissionFileInfoList(
             AttributeValue fileContainsAttr) {
 
         return fileContainsAttr.l().stream()
                 .map(attr -> {
                     Map<String, AttributeValue> m = attr.m();
 
-                    return SubmissionDocumentInfo.builder()
+                    return SubmissionDocumentInfoResponseDto.builder()
                             .documentId(getString(m, "documentId"))
                             .documentType(getString(m, "documentType"))
                             .fileName(getString(m, "fileName"))
                             .originalFileKey(getString(m, "s3Key"))
                             .extractedDataKey(getString(m, "extractedDataS3Key"))
+                            .fileSize(formatFileSize((getValue(m, "fileSize"))))
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -147,4 +150,23 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         AttributeValue val = item.get(key);
         return (val != null && val.s() != null) ? val.s() : "";
     }
+
+    private String getValue(Map<String, AttributeValue> map, String key) {
+        AttributeValue attr = map.get(key);
+
+        if (attr == null) {
+            return "";
+        }
+
+        if (attr.s() != null) {
+            return attr.s();
+        }
+
+        if (attr.n() != null) {
+            return attr.n();
+        }
+
+        return "";
+    }
+
 }

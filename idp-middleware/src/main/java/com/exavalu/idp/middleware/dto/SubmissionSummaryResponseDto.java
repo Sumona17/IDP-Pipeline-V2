@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubmissionSummary {
+public class SubmissionSummaryResponseDto {
 
     private String submissionId;
     private String createdAt;

@@ -1,8 +1,8 @@
 package com.exavalu.idp.middleware.service.impl;
 
 
-import com.exavalu.idp.middleware.dto.InReviewSubmissionDto;
-import com.exavalu.idp.middleware.dto.SubmissionSummary;
+import com.exavalu.idp.middleware.dto.InReviewSubmissionRequestDto;
+import com.exavalu.idp.middleware.dto.SubmissionSummaryResponseDto;
 import com.exavalu.idp.middleware.repository.InReviewSubmissionRepository;
 import com.exavalu.idp.middleware.repository.SubmissionRepository;
 import com.exavalu.idp.middleware.service.InReviewSubmissionService;
@@ -23,7 +23,7 @@ public class InReviewSubmissionServiceImpl implements InReviewSubmissionService 
     private final SubmissionRepository submissionRepository;
 
     @Override
-    public List<SubmissionSummary> fetchMySubmissionList(String userName) {
+    public List<SubmissionSummaryResponseDto> fetchMySubmissionList(String userName) {
 
         List<String> submissionIds =
                 inReviewRepository.fetchSubmissionIdsByUserName(userName);
@@ -32,7 +32,7 @@ public class InReviewSubmissionServiceImpl implements InReviewSubmissionService 
     }
 
     @Override
-    public void updateStatus(InReviewSubmissionDto dto) {
+    public void updateStatus(InReviewSubmissionRequestDto dto) {
 
         inReviewRepository.updateSubmissionStatus(
                 dto.getSubmissionId(),

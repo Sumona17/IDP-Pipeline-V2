@@ -9,11 +9,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubmissionDocumentInfo {
+public class SubmissionDocumentInfoResponseDto {
 
     private String documentId;
     private String documentType;
     private String fileName;
+    private String fileSize;
     private String extractedDataKey;
     private String originalFileKey;
 }

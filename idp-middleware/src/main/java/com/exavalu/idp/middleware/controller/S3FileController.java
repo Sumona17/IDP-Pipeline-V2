@@ -1,5 +1,6 @@
 package com.exavalu.idp.middleware.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RestController
 @RequestMapping("/api/s3")
 @RequiredArgsConstructor
+@Hidden
 public class S3FileController {
 
     @Value("${aws.bucketname}")

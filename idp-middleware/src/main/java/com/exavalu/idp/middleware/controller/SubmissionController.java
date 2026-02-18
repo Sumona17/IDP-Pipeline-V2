@@ -19,23 +19,34 @@ public class SubmissionController {
     private static final Logger logger = LoggerFactory.getLogger(SubmissionController.class);
 
     @GetMapping("/fetchAllSubmissions")
-    public List<SubmissionSummary> getUsedRecords() {
-        return service.fetchUsedRecords();
+    public ApiResponseDto<List<SubmissionSummaryResponseDto>> getUsedRecords() {
+
+        List<SubmissionSummaryResponseDto> records = service.fetchUsedRecords();
+
+        return ApiResponseDto.success(records, "Submissions fetched successfully");
     }
 
     @GetMapping("/documents/{submissionId}")
-    public List<SubmissionDocumentInfo> getRecordBySubmissionId(@PathVariable String submissionId) {
-        List<SubmissionDocumentInfo> record = service.fetchDocumentsBySubmissionId(submissionId);
+    public ApiResponseDto<List<SubmissionDocumentInfoResponseDto>> getRecordBySubmissionId(
+            @PathVariable String submissionId) {
+
+        List<SubmissionDocumentInfoResponseDto> record = service.fetchDocumentsBySubmissionId(submissionId);
+
         if (record.isEmpty()) {
-            throw new RecordNotFoundException("Submission not found for ID: " + submissionId);
+            throw new RecordNotFoundException(
+                    "Submission not found for ID: " + submissionId
+            );
         }
-        return record;
+
+        return ApiResponseDto.success(record, "Submission documents fetched successfully");
     }
 
     @PostMapping("/getValidateData")
-    public ValidateDataInfo getValidateData(@RequestBody ValidateDataRequestDto request) {
+    public ApiResponseDto<ValidateDataInfoResponseDto> getValidateData(@RequestBody ValidateDataRequestDto request) {
 
-        return service.getValidateData(request);
+        ValidateDataInfoResponseDto response = service.getValidateData(request);;
+
+        return ApiResponseDto.success(response, "Validate data fetched successfully");
     }
 
 

@@ -2,7 +2,6 @@ package com.exavalu.idp.middleware.service.impl;
 
 import com.exavalu.idp.middleware.dto.*;
 import com.exavalu.idp.middleware.repository.SubmissionRepository;
-import com.exavalu.idp.middleware.repository.impl.SubmissionRepositoryImpl;
 import com.exavalu.idp.middleware.service.S3FileService;
 import com.exavalu.idp.middleware.service.SubmissionRecordService;
 import lombok.RequiredArgsConstructor;
@@ -23,19 +22,19 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
     private final S3FileService s3FileService;
 
     @Override
-    public List<SubmissionSummary> fetchUsedRecords() {
+    public List<SubmissionSummaryResponseDto> fetchUsedRecords() {
         return repository.fetchPendingSubmissions();
     }
 
     @Override
-    public List<SubmissionDocumentInfo> fetchDocumentsBySubmissionId(String submissionId) {
+    public List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId) {
         return repository.fetchDocumentsBySubmissionId(submissionId);
     }
 
     @Override
-    public ValidateDataInfo getValidateData(ValidateDataRequestDto request) {
+    public ValidateDataInfoResponseDto getValidateData(ValidateDataRequestDto request) {
 
-        ValidateDataInfo dataInfo = new ValidateDataInfo();
+        ValidateDataInfoResponseDto dataInfo = new ValidateDataInfoResponseDto();
         dataInfo.setExtractedData(s3FileService.getJsonNodeFromS3Key(request.getExtractedDataKey()));
         dataInfo.setEncodedPdfData(s3FileService.getBase64FromS3Uri(request.getOriginalFileKey()));
 
