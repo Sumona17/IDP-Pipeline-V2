@@ -1,0 +1,69 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - echo "Preparing deploy for workflow-ui/client"
+      - export AWS_REGION="${AWS_REGION:-us-east-1}"
+      - export API_ORIGIN_DOMAIN_NAME="${API_ORIGIN_DOMAIN_NAME:-}"
+      - export API_BASE_URL_FROM_ENV=""
+      - |
+        if [ -f workflow-ui/client/.env ]; then
+          API_BASE_URL_FROM_ENV="$(grep -E '^VITE_APP_BASE_URL=' workflow-ui/client/.env | head -n1 | cut -d= -f2- || true)"
+          API_BASE_URL_FROM_ENV="${API_BASE_URL_FROM_ENV%\"}"
+          API_BASE_URL_FROM_ENV="${API_BASE_URL_FROM_ENV#\"}"
+          API_BASE_URL_FROM_ENV="${API_BASE_URL_FROM_ENV%\'}"
+          API_BASE_URL_FROM_ENV="${API_BASE_URL_FROM_ENV#\'}"
+        fi
+      - |
+        if [ -z "$API_ORIGIN_DOMAIN_NAME" ] && [ -n "$API_BASE_URL_FROM_ENV" ]; then
+          API_ORIGIN_DOMAIN_NAME="$(python - <<'PY'
+import os
+from urllib.parse import urlparse
+u = os.environ.get("API_BASE_URL_FROM_ENV", "").strip()
+print(urlparse(u).hostname or "")
+PY
+)"
+        fi
+      - |
+        PARAMS="ProjectName=${PROJECT_NAME} Environment=${ENVIRONMENT} PriceClass=${PRICE_CLASS}"
+        if [ -n "$API_ORIGIN_DOMAIN_NAME" ]; then
+          PARAMS="$PARAMS ApiOriginDomainName=$API_ORIGIN_DOMAIN_NAME"
+        fi
+        echo "Deploying infra stack: ${STACK_NAME}"
+        aws cloudformation deploy \
+          --region "$AWS_REGION" \
+          --template-file infra/aws/idp-ui-s3-cloudfront.yml \
+          --stack-name "$STACK_NAME" \
+          --parameter-overrides $PARAMS \
+          --no-fail-on-empty-changeset
+      - export UI_BUCKET="$(aws cloudformation describe-stacks --region "$AWS_REGION" --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='UiBucketName'].OutputValue" --output text)"
+      - export CF_DIST_ID="$(aws cloudformation describe-stacks --region "$AWS_REGION" --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)"
+      - export CF_DOMAIN="$(aws cloudformation describe-stacks --region "$AWS_REGION" --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDomainName'].OutputValue" --output text)"
+      - test -n "$UI_BUCKET"
+      - test -n "$CF_DIST_ID"
+      - test -n "$CF_DOMAIN"
+      - export VITE_APP_BASE_URL="https://${CF_DOMAIN}/api/workflow"
+      - echo "Using VITE_APP_BASE_URL=${VITE_APP_BASE_URL}"
+  build:
+    commands:
+      - set -euo pipefail
+      - cd workflow-ui/client
+      - npm install
+      - npm run build
+      - cd ../..
+  post_build:
+    commands:
+      - set -euo pipefail
+      - echo "Syncing assets to s3://${UI_BUCKET}/"
+      - aws s3 sync workflow-ui/client/dist "s3://${UI_BUCKET}/" --delete --cache-control "public,max-age=31536000,immutable" --exclude "index.html"
+      - aws s3 cp workflow-ui/client/dist/index.html "s3://${UI_BUCKET}/index.html" --cache-control "no-cache,max-age=0" --content-type "text/html; charset=utf-8"
+      - aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
+      - echo "Deployment complete: https://${CF_DOMAIN}"
