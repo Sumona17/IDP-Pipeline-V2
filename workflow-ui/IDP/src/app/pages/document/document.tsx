@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, type JSX } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSubmissionDocuments, type SubmissionDocument } from '../../services/document-list-service';
+import apiClient from '../../services/handler';
 
 
 interface UploadedDocument {
@@ -14,6 +15,20 @@ interface UploadedDocument {
   extractedDataKey: string;
   originalFileKey: string;
 }
+
+interface InstanceLogStep {
+  id: string;
+  nodeName: string;
+  nodeType?: string;
+  nodeId?: string;
+  status: string;
+  message?: string;
+  executedAt: string;
+  durationFormatted?: string;
+  requestPayload?: unknown;
+  responsePayload?: unknown;
+}
+
 
 const mapToUploadedDocument = (doc: SubmissionDocument): UploadedDocument => ({
   id: doc.documentId,
@@ -34,6 +49,11 @@ const DocumentUploaded: React.FC = () => {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [instanceSteps, setInstanceSteps] = useState<InstanceLogStep[] | null>(null);
+  const [instanceStepsLoading, setInstanceStepsLoading] = useState(false);
+  const [instanceStepsError, setInstanceStepsError] = useState<string | null>(null);
+  const [showInstanceStepsModal, setShowInstanceStepsModal] = useState(false);
+  const [activeInstanceId, setActiveInstanceId] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
@@ -95,6 +115,72 @@ const DocumentUploaded: React.FC = () => {
   const handleView = (docId: string) => {};
 
   const handleDownload = (docId: string, docName: string) => {
+  };
+
+  const formatPayload = (payload: unknown): string => {
+    if (payload === null || payload === undefined) return '';
+    if (typeof payload === 'string') return payload;
+    try {
+      return JSON.stringify(payload, null, 2);
+    } catch {
+      return String(payload);
+    }
+  };
+
+  const getStepStatusStyle = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case 'COMPLETED':
+      case 'SUCCESS':
+        return {
+          dot: 'bg-green-500',
+          badge: 'bg-green-100 text-green-700',
+        };
+      case 'FAILED':
+      case 'ERROR':
+        return {
+          dot: 'bg-red-500',
+          badge: 'bg-red-100 text-red-700',
+        };
+      case 'WAITING':
+      case 'PENDING':
+        return {
+          dot: 'bg-amber-500',
+          badge: 'bg-amber-100 text-amber-700',
+        };
+      default:
+        return {
+          dot: 'bg-gray-500',
+          badge: 'bg-gray-100 text-gray-700',
+        };
+    }
+  };
+
+  const handleOpenLogs = async (instanceId: string) => {
+    setActiveInstanceId(instanceId);
+    setShowInstanceStepsModal(true);
+    setInstanceStepsLoading(true);
+    setInstanceStepsError(null);
+    setInstanceSteps(null);
+
+    console.log(instanceId)
+
+    try {
+      const response = await apiClient.get<InstanceLogStep[]>(`/logs/${instanceId}`);
+      setInstanceSteps(Array.isArray(response) ? response : []);
+    } catch (err) {
+      console.error('Failed to fetch instance logs:', err);
+      setInstanceStepsError(err instanceof Error ? err.message : 'Failed to load logs');
+      setInstanceSteps([]);
+    } finally {
+      setInstanceStepsLoading(false);
+    }
+  };
+
+  const closeLogsModal = () => {
+    setShowInstanceStepsModal(false);
+    setInstanceSteps(null);
+    setInstanceStepsError(null);
+    setActiveInstanceId(null);
   };
 
   const handleDocumentClick = (doc: UploadedDocument) => {
@@ -250,11 +336,17 @@ const DocumentUploaded: React.FC = () => {
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                
                               </svg>
                             </button>
                             <button onClick={() => handleDownload(doc.id, doc.documentName)} className="text-green-600 hover:text-green-800" title="Download">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                            </button>
+                            <button onClick={() => handleOpenLogs(doc.id)} className="text-cyan-600 hover:text-cyan-800" title="View Logs">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9h6m-6 4h4" />
                               </svg>
                             </button>
                           </div>
@@ -311,8 +403,105 @@ const DocumentUploaded: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {showInstanceStepsModal && (
+        <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+            <div className="bg-white border-b p-6 flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Instance Steps</h2>
+                <p className="text-xs text-gray-500 mt-1">Instance ID: {activeInstanceId ?? '-'}</p>
+              </div>
+              <button onClick={closeLogsModal} className="text-gray-500 hover:text-gray-700" title="Close">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto">
+              {instanceStepsLoading && (
+                <div className="text-sm text-gray-500">Loading steps...</div>
+              )}
+
+              {instanceStepsError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-red-700">{instanceStepsError}</p>
+                </div>
+              )}
+
+              {!instanceStepsLoading && instanceSteps && instanceSteps.length > 0 && (
+                <div className="space-y-4">
+                  {instanceSteps
+                    .slice()
+                    .sort((a, b) => new Date(a.executedAt).getTime() - new Date(b.executedAt).getTime())
+                    .map((step) => {
+                      const style = getStepStatusStyle(step.status);
+                      return (
+                        <div key={step.id} className="relative pl-6">
+                          <div className="absolute left-2 top-2 h-full w-px bg-gray-200" />
+                          <div className={`absolute left-0 top-2 h-3 w-3 rounded-full ${style.dot}`} />
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900">{step.nodeName}</div>
+                                <div className="text-xs text-gray-500">
+                                  {step.nodeType ?? '-'} · {step.nodeId ?? '-'}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {step.durationFormatted ? step.durationFormatted : '0s'}
+                                </div>
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded-full ${style.badge}`}>
+                                {step.status}
+                              </span>
+                            </div>
+                            <div className="mt-2 text-sm text-gray-700">{step.message ?? '-'}</div>
+                            <div className="mt-2 text-xs text-gray-500">
+                              {step.executedAt ? new Date(step.executedAt).toLocaleString() : '-'}
+                            </div>
+                            {(step.requestPayload || step.responsePayload) && (
+                              <div className="mt-3 space-y-2">
+                                {step.requestPayload && (
+                                  <details className="bg-white border border-gray-200 rounded-md">
+                                    <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
+                                      Request Payload
+                                    </summary>
+                                    <pre className="text-xs overflow-x-auto text-gray-700 px-3 pb-3">
+                                      {formatPayload(step.requestPayload)}
+                                    </pre>
+                                  </details>
+                                )}
+                                {step.responsePayload && (
+                                  <details className="bg-white border border-gray-200 rounded-md">
+                                    <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
+                                      Response Payload
+                                    </summary>
+                                    <pre className="text-xs overflow-x-auto text-gray-700 px-3 pb-3">
+                                      {formatPayload(step.responsePayload)}
+                                    </pre>
+                                  </details>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              {!instanceStepsLoading && instanceSteps && instanceSteps.length === 0 && (
+                <div className="text-sm text-gray-500">No steps found for this instance.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
 
 export default DocumentUploaded;
+
+
