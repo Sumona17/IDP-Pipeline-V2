@@ -11,6 +11,9 @@ import org.springframework.stereotype.Repository;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,14 +40,14 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
 
         ScanRequest scanRequest = ScanRequest.builder()
                 .tableName(tableName)
-                .filterExpression("#st = :pending")
+                .filterExpression("#st = :new")
                 .projectionExpression(
-                        "submissionId, createdAt, incomingPath, senderEmail, #st")
+                        "submissionId, createdAt, incomingPath, senderEmail, updatedAt, #st")
                 .expressionAttributeNames(Map.of(
                         "#st", "status"
                 ))
                 .expressionAttributeValues(Map.of(
-                        ":pending", AttributeValue.fromS("PENDING")
+                        ":new", AttributeValue.fromS("NEW")
                 ))
                 .build();
 
@@ -92,7 +95,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         KeysAndAttributes keysAndAttributes = KeysAndAttributes.builder()
                 .keys(keys)
                 .projectionExpression(
-                        "submissionId, createdAt, incomingPath, senderEmail, #st")
+                        "submissionId, createdAt, incomingPath, senderEmail, updatedAt, #st")
                 .expressionAttributeNames(Map.of(
                         "#st", "status"
                 ))
@@ -113,15 +116,76 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public void updateReviewInProgress(String submissionId, String documentId) {
+
+        GetItemRequest getRequest = GetItemRequest.builder()
+                .tableName(tableName)
+                .key(Map.of(
+                        "submissionId", AttributeValue.builder().s(submissionId).build()
+                ))
+                .build();
+
+        GetItemResponse getResponse = dynamoDbClient.getItem(getRequest);
+
+        Map<String, AttributeValue> item = getResponse.item();
+
+        if (item == null || item.isEmpty()) {
+            throw new RuntimeException("Submission not found: " + submissionId);
+        }
+
+        List<AttributeValue> files = item.get("file_contains").l();
+
+        int fileIndex = -1;
+
+        for (int i = 0; i < files.size(); i++) {
+            Map<String, AttributeValue> fileMap = files.get(i).m();
+            if (documentId.equals(fileMap.get("documentId").s())) {
+                fileIndex = i;
+                break;
+            }
+        }
+
+        if (fileIndex == -1) {
+            throw new RuntimeException("Document not found: " + documentId);
+        }
+
+        UpdateItemRequest updateRequest = UpdateItemRequest.builder()
+                .tableName(tableName)
+                .key(Map.of(
+                        "submissionId", AttributeValue.builder().s(submissionId).build()
+                ))
+                .updateExpression(
+                        "SET #status = :status, " +
+                                "file_contains[" + fileIndex + "].ingestion_status = :ingStatus, " +
+                                "updatedAt = :updatedAt"
+                )
+                .expressionAttributeNames(Map.of(
+                        "#status", "status"
+                ))
+                .expressionAttributeValues(Map.of(
+                        ":status", AttributeValue.builder().s("Review in Progress").build(),
+                        ":ingStatus", AttributeValue.builder().s("Review in Progress").build(),
+                        ":updatedAt", AttributeValue.builder()
+                                .n(String.valueOf(Instant.now().getEpochSecond()))
+                                .build()
+                ))
+                .build();
+
+        dynamoDbClient.updateItem(updateRequest);
+    }
+
+
 
     private SubmissionSummaryResponseDto mapToSubmissionSummary(
             Map<String, AttributeValue> item) {
 
         return SubmissionSummaryResponseDto.builder()
                 .submissionId(getString(item, "submissionId"))
-                .createdAt(getString(item, "createdAt"))
-                .incomingPath(getString(item, "incomingPath"))
-                .senderEmail(getString(item, "senderEmail"))
+                .createdAt(convertEpochToLocalDateTime(getValue(item, "createdAt")))
+                .updatedAt(convertEpochToLocalDateTime(getValue(item, "updatedAt")))
+                .documentSource("DOCUMENT_UPLOAD".equals(getString(item, "incomingPath")) ? "Document Upload" : "Email")
+                .createdBy(getString(item, "senderEmail"))
                 .status(getString(item, "status"))
                 .build();
     }
@@ -138,9 +202,11 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                             .documentType(getString(m, "documentType"))
                             .fileName(getString(m, "fileName"))
                             .originalFileKey(getString(m, "s3Key"))
+                            .status(getString(m, "ingestion_status"))
                             .extractedDataKey(getString(m, "extractedDataS3Key"))
                             .fileSize(formatFileSize((getValue(m, "fileSize"))))
                             .fileProgress(getValue(m, "fileProgress"))
+                            .createdAt(convertEpochToLocalDateTime(getValue(m, "createdAt")))
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -168,6 +234,21 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         }
 
         return "";
+    }
+
+    private String convertEpochToLocalDateTime(Object epochValue) {
+
+        if (epochValue == null) return null;
+
+        long epochSeconds = Long.parseLong(epochValue.toString());
+
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("MMM dd, yyyy, hh:mm a");
+
+        return Instant.ofEpochSecond(epochSeconds)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime()
+                .format(formatter);
     }
 
 }

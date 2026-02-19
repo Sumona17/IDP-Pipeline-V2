@@ -37,6 +37,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         ValidateDataInfoResponseDto dataInfo = new ValidateDataInfoResponseDto();
         dataInfo.setExtractedData(s3FileService.getJsonNodeFromS3Key(request.getExtractedDataKey()));
         dataInfo.setEncodedPdfData(s3FileService.getBase64FromS3Uri(request.getOriginalFileKey()));
+        repository.updateReviewInProgress(request.getSubmissionId(), request.getDocumentId());
 
         return dataInfo;
     }

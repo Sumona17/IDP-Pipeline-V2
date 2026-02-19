@@ -19,14 +19,15 @@ public class InReviewSubmissionServiceImpl implements InReviewSubmissionService 
 
     private static final Logger log = LoggerFactory.getLogger(InReviewSubmissionServiceImpl.class);
 
+    private static final String STATUS = "Pending Review";
+
     private final InReviewSubmissionRepository inReviewRepository;
     private final SubmissionRepository submissionRepository;
 
     @Override
     public List<SubmissionSummaryResponseDto> fetchMySubmissionList(String userName) {
 
-        List<String> submissionIds =
-                inReviewRepository.fetchSubmissionIdsByUserName(userName);
+        List<String> submissionIds = inReviewRepository.fetchSubmissionIdsByUserName(userName);
 
         return submissionRepository.fetchSubmissionsByIds(submissionIds);
     }
@@ -34,13 +35,8 @@ public class InReviewSubmissionServiceImpl implements InReviewSubmissionService 
     @Override
     public void updateStatus(InReviewSubmissionRequestDto dto) {
 
-        inReviewRepository.updateSubmissionStatus(
-                dto.getSubmissionId(),
-                dto.getStatus(),
-                dto.getUserName(),
-                dto.getEMail()
-        );
+        inReviewRepository.updateSubmissionStatus(dto.getSubmissionId(), STATUS, dto.getUserName(), dto.getEMail());
 
-        inReviewRepository.updateSubmissionTableStatus(dto.getSubmissionId(), dto.getStatus());
+        inReviewRepository.updateSubmissionTableStatus(dto.getSubmissionId(), STATUS);
     }
 }

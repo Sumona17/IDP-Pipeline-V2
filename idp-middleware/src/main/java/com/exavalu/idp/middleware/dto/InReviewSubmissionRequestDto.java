@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 public class InReviewSubmissionRequestDto {
 
     private String submissionId;
-    private String status;
     private String userName;
     private String eMail;
 }

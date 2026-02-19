@@ -13,7 +13,8 @@ public class SubmissionSummaryResponseDto {
 
     private String submissionId;
     private String createdAt;
-    private String incomingPath;
-    private String senderEmail;
+    private String updatedAt;
+    private String createdBy;
+    private String documentSource;
     private String status;
 }

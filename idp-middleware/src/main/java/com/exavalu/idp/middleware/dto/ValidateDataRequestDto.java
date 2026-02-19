@@ -1,9 +1,7 @@
 package com.exavalu.idp.middleware.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
 
 @Data
 @Builder
@@ -11,7 +9,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ValidateDataRequestDto {
 
+    @NonNull
     private String submissionId;
+
+    @NotNull
+    private String documentId;
     private String extractedDataKey;
     private String originalFileKey;
 }

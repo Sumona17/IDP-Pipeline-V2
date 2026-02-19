@@ -10,4 +10,5 @@ public interface SubmissionRepository {
     List<SubmissionSummaryResponseDto> fetchPendingSubmissions();
     List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId);
     List<SubmissionSummaryResponseDto> fetchSubmissionsByIds(List<String> submissionIds);
+    void updateReviewInProgress(String submissionId, String documentId);
 }
