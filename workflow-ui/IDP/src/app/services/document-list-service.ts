@@ -8,6 +8,7 @@ export interface SubmissionDocument {
   extractedDataKey: string;
   originalFileKey: string;
   fileSize: string;
+  fileProgress: string
 }
 
 

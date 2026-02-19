@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, type JSX } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSubmissionDocuments, type SubmissionDocument } from '../../services/document-list-service';
-import apiClient from '../../services/handler';
 import { InstanceStepsModal, type InstanceLogStep } from './InstanceStepsModal';
+import { fetchDocument } from '../../services/documnet-view-service';
 
 
 interface UploadedDocument {
@@ -15,6 +15,7 @@ interface UploadedDocument {
   documentSize: string;
   extractedDataKey: string;
   originalFileKey: string;
+  fileProgress: string;
 }
 
 const mapToUploadedDocument = (doc: SubmissionDocument): UploadedDocument => ({
@@ -26,6 +27,7 @@ const mapToUploadedDocument = (doc: SubmissionDocument): UploadedDocument => ({
   documentSize: doc.fileSize,
   customerName: '-',
   confidence: 0,
+  fileProgress: doc.fileProgress ?? '',
   createdAt: new Date().toISOString(),
 });
 
@@ -99,9 +101,33 @@ const DocumentUploaded: React.FC = () => {
       hour: '2-digit', minute: '2-digit',
     });
 
-  const handleView = (docId: string) => {};
+  const handleView = async (doc: UploadedDocument) => {
+    try {
+      const encodedPdfData = await fetchDocument(doc.originalFileKey);
+      const bytes = Uint8Array.from(atob(encodedPdfData), c => c.charCodeAt(0));
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      console.error('Failed to fetch document for viewing:', err);
+    }
+  };
 
-  const handleDownload = (docId: string, docName: string) => {
+  const handleDownload = async (doc: UploadedDocument) => {
+    try {
+      const encodedPdfData = await fetchDocument(doc.originalFileKey);
+      const bytes = Uint8Array.from(atob(encodedPdfData), c => c.charCodeAt(0));
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.documentName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to fetch document for download:', err);
+    }
   };
 
   const handleOpenLogs = async (instanceId: string) => {
@@ -341,12 +367,12 @@ const DocumentUploaded: React.FC = () => {
                         <td className="px-2 py-2">
                           <div className="flex flex-col gap-1">
                             <span className="text-xs font-medium text-gray-900">
-                              {doc.confidence ? Math.round(Number(doc.confidence) * 100) : 0}%
+                              {doc.fileProgress ? doc.fileProgress : '—'}
                             </span>
                             <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-cyan-600 rounded-full transition-all"
-                                style={{ width: `${doc.confidence ? Number(doc.confidence) * 100 : 0}%` }}
+                                style={{ width: doc.fileProgress ? `${parseFloat(doc.fileProgress)}%` : '0%' }}
                               />
                             </div>
                           </div>
@@ -359,14 +385,14 @@ const DocumentUploaded: React.FC = () => {
                         </td>
                         <td className="px-2 py-2">
                           <div className="flex items-center space-x-2">
-                            <button onClick={() => handleView(doc.id)} className="text-blue-600 hover:text-blue-800" title="View">
+                            <button onClick={() => handleView(doc)} className="text-blue-600 hover:text-blue-800" title="View">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 
                               </svg>
                             </button>
-                            <button onClick={() => handleDownload(doc.id, doc.documentName)} className="text-green-600 hover:text-green-800" title="Download">
+                            <button onClick={() => handleDownload(doc)} className="text-green-600 hover:text-green-800" title="Download">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                               </svg>
