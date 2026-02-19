@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect, type JSX } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import documentUploadedData from '../../../../public/data/uploadedDocumentData.json';
+import { getSubmissionDocuments, type SubmissionDocument } from '../../services/document-list-service';
+import { InstanceStepsModal, type InstanceLogStep } from './InstanceStepsModal';
+import { fetchDocument } from '../../services/documnet-view-service';
+
 
 interface UploadedDocument {
   id: string;
@@ -10,21 +13,60 @@ interface UploadedDocument {
   confidence: number;
   createdAt: string;
   documentSize: string;
+  extractedDataKey: string;
+  originalFileKey: string;
+  fileProgress: string;
 }
+
+const mapToUploadedDocument = (doc: SubmissionDocument): UploadedDocument => ({
+  id: doc.documentId,
+  documentName: doc.fileName,
+  documentType: doc.documentType,
+  extractedDataKey: doc.extractedDataKey,
+  originalFileKey: doc.originalFileKey,
+  documentSize: doc.fileSize,
+  customerName: '-',
+  confidence: 0,
+  fileProgress: doc.fileProgress ?? '',
+  createdAt: new Date().toISOString(),
+});
 
 const DocumentUploaded: React.FC = () => {
   const navigate = useNavigate();
   const { submissionId } = useParams<{ submissionId?: string }>();
+
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [instanceSteps, setInstanceSteps] = useState<InstanceLogStep[] | null>(null);
+  const [instanceStepsLoading, setInstanceStepsLoading] = useState(false);
+  const [instanceStepsError, setInstanceStepsError] = useState<string | null>(null);
+  const [showInstanceStepsModal, setShowInstanceStepsModal] = useState(false);
+  const [activeInstanceId, setActiveInstanceId] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
-  const documents: UploadedDocument[] = documentUploadedData.documents;
-
   useEffect(() => {
-    if (submissionId) console.log('Viewing documents for submission:', submissionId);
+    if (!submissionId) return;
+
+    const fetchDocuments = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const data = await getSubmissionDocuments(submissionId);
+        setDocuments(data.map(mapToUploadedDocument));
+      } catch (err) {
+        console.error('Failed to fetch submission documents:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load documents');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDocuments();
   }, [submissionId]);
 
   const documentTypes = ['All', ...Array.from(new Set(documents.map(d => d.documentType)))];
@@ -59,19 +101,144 @@ const DocumentUploaded: React.FC = () => {
       hour: '2-digit', minute: '2-digit',
     });
 
-  const handleView = (docId: string) =>
-    window.open(`/api/documents/${docId}/view`, '_blank');
-
-  const handleDownload = (docId: string, docName: string) => {
-    const link = document.createElement('a');
-    link.href = `/api/documents/${docId}/download`;
-    link.download = docName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleView = async (doc: UploadedDocument) => {
+    try {
+      const encodedPdfData = await fetchDocument(doc.originalFileKey);
+      const bytes = Uint8Array.from(atob(encodedPdfData), c => c.charCodeAt(0));
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      console.error('Failed to fetch document for viewing:', err);
+    }
   };
 
-  const handleDocumentClick = () => navigate('/document-review');
+  const handleDownload = async (doc: UploadedDocument) => {
+    try {
+      const encodedPdfData = await fetchDocument(doc.originalFileKey);
+      const bytes = Uint8Array.from(atob(encodedPdfData), c => c.charCodeAt(0));
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.documentName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to fetch document for download:', err);
+    }
+  };
+
+  const handleOpenLogs = async (instanceId: string) => {
+    setActiveInstanceId(instanceId);
+    setShowInstanceStepsModal(true);
+    setInstanceStepsLoading(true);
+    setInstanceStepsError(null);
+    setInstanceSteps(null);
+
+    try {
+      // const response = await apiClient.get<InstanceLogStep[]>(`/logs/${instanceId}`);
+      const response = [
+    {
+        "id": "1eb47afa-2c5a-4757-8f0b-acc8a73212f5",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-jzmduj4v",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_WATCHER",
+        "status": "STARTED",
+        "message": "Node started",
+        "requestPayload": null,
+        "responsePayload": null,
+        "executedAt": "2026-02-18T14:49:20.916376",
+        "durationFormatted": null
+    },
+    {
+        "id": "6bbe3c32-71d8-4c14-8b19-f10464d8daad",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-jzmduj4v",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_WATCHER",
+        "status": "COMPLETED",
+        "message": "Document uploaded",
+        "requestPayload": "{\"fileName\": \"Acord140_V2.pdf\", \"fileSize\": 330641}",
+        "responsePayload": "{}",
+        "executedAt": "2026-02-18T14:49:25.917013",
+        "durationFormatted": "5s"
+    },
+    {
+        "id": "eeb4ef5c-5c08-4ea6-81b8-356d8784baf4",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-njgl43fw",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_CLASSIFIER",
+        "status": "STARTED",
+        "message": "Node started",
+        "requestPayload": null,
+        "responsePayload": null,
+        "executedAt": "2026-02-18T14:49:25.942514",
+        "durationFormatted": null
+    },
+    {
+        "id": "59fbc1cf-9b66-49f6-9f2e-388f5f087297",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-njgl43fw",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_CLASSIFIER",
+        "status": "COMPLETED",
+        "message": "Document Classification completed",
+        "requestPayload": "{\"filename\": \"ACORD 140\", \"document_type\": \"pdf_with_images_and_text\"}",
+        "responsePayload": "{}",
+        "executedAt": "2026-02-18T14:49:29.648069",
+        "durationFormatted": "3s"
+    },
+    {
+        "id": "ed57ff36-0f24-4d5f-b973-df59782bb667",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-lickzlke",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_INGESTION",
+        "status": "STARTED",
+        "message": "Node started",
+        "requestPayload": null,
+        "responsePayload": null,
+        "executedAt": "2026-02-18T14:49:29.672516",
+        "durationFormatted": null
+    },
+    {
+        "id": "d8fe5a9a-7868-45ee-b7bd-ef9e7e9f05af",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-lickzlke",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_INGESTION",
+        "status": "COMPLETED",
+        "message": "Document Ingestion Completed",
+        "requestPayload": "{\"documentType\": \"ACORD 140 Property Section\", \"documentExtractedKey\": \"5b41a801-3b46-4262-8245-be9fd3befb70/e71f905a-46a5-4967-9c20-32fb3ddfb48e/Acord140_V2.pdf.json\"}",
+        "responsePayload": "{}",
+        "executedAt": "2026-02-18T14:50:21.184077",
+        "durationFormatted": "51s"
+    }
+]
+      setInstanceSteps(Array.isArray(response) ? response : []);
+    } catch (err) {
+      console.error('Failed to fetch instance logs:', err);
+      setInstanceStepsError(err instanceof Error ? err.message : 'Failed to load logs');
+      setInstanceSteps([]);
+    } finally {
+      setInstanceStepsLoading(false);
+    }
+  };
+
+  const closeLogsModal = () => {
+    setShowInstanceStepsModal(false);
+    setInstanceSteps(null);
+    setInstanceStepsError(null);
+    setActiveInstanceId(null);
+  };
+
+  const handleDocumentClick = (doc: UploadedDocument) => {
+    navigate(`/document-review/${encodeURIComponent(doc.extractedDataKey)}/${encodeURIComponent(doc.originalFileKey)}`);
+  }
 
   const getFileIcon = (filename: string): JSX.Element => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -86,9 +253,29 @@ const DocumentUploaded: React.FC = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600 mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Loading documents...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="h-full flex flex-col overflow-hidden">
+        {error && (
+          <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-2 flex-shrink-0">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
+        )}
+
         <div className="px-0 pt-2 pb-1.5 flex-shrink-0">
           <div className="flex items-end gap-2">
             <div className="flex-1 grid grid-cols-4 gap-2">
@@ -131,6 +318,7 @@ const DocumentUploaded: React.FC = () => {
             </button>
           </div>
         </div>
+
         <div className="flex-1 overflow-hidden px-0 pb-3">
           <div className="border border-gray-200 rounded flex flex-col overflow-hidden">
             <div className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-280px)]">
@@ -163,7 +351,7 @@ const DocumentUploaded: React.FC = () => {
                           <div className="flex items-center space-x-2 min-w-0">
                             {getFileIcon(doc.documentName)}
                             <button
-                              onClick={() => handleDocumentClick()}
+                              onClick={() => handleDocumentClick(doc)}
                               className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline truncate block text-left flex-1 min-w-0"
                             >
                               {doc.documentName}
@@ -179,12 +367,12 @@ const DocumentUploaded: React.FC = () => {
                         <td className="px-2 py-2">
                           <div className="flex flex-col gap-1">
                             <span className="text-xs font-medium text-gray-900">
-                              {doc.confidence ? Math.round(Number(doc.confidence) * 100) : 0}%
+                              {doc.fileProgress ? doc.fileProgress : '—'}
                             </span>
                             <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-cyan-600 rounded-full transition-all"
-                                style={{ width: `${doc.confidence ? Number(doc.confidence) * 100 : 0}%` }}
+                                style={{ width: doc.fileProgress ? `${parseFloat(doc.fileProgress)}%` : '0%' }}
                               />
                             </div>
                           </div>
@@ -197,15 +385,21 @@ const DocumentUploaded: React.FC = () => {
                         </td>
                         <td className="px-2 py-2">
                           <div className="flex items-center space-x-2">
-                            <button onClick={() => handleView(doc.id)} className="text-blue-600 hover:text-blue-800" title="View">
+                            <button onClick={() => handleView(doc)} className="text-blue-600 hover:text-blue-800" title="View">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                
                               </svg>
                             </button>
-                            <button onClick={() => handleDownload(doc.id, doc.documentName)} className="text-green-600 hover:text-green-800" title="Download">
+                            <button onClick={() => handleDownload(doc)} className="text-green-600 hover:text-green-800" title="Download">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                            </button>
+                            <button onClick={() => handleOpenLogs(doc.id)} className="text-cyan-600 hover:text-cyan-800" title="View Logs">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9h6m-6 4h4" />
                               </svg>
                             </button>
                           </div>
@@ -262,8 +456,20 @@ const DocumentUploaded: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <InstanceStepsModal
+        isOpen={showInstanceStepsModal}
+        activeInstanceId={activeInstanceId}
+        instanceSteps={instanceSteps}
+        instanceStepsLoading={instanceStepsLoading}
+        instanceStepsError={instanceStepsError}
+        onClose={closeLogsModal}
+      />
     </>
   );
 };
 
 export default DocumentUploaded;
+
+
+

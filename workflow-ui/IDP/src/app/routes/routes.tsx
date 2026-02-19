@@ -7,7 +7,7 @@ import { MainLayout } from "../layouts/main-layout";
 import { AuthLayout } from "../layouts/auth-layout";
 
 import Dashboard from "../pages/dashboard/dashboard";
-import DocumentReview from "../pages/document_review/document-review";
+import DocumentReview from "../pages/document-review/document-review";
 import DocumentUploaded from "../pages/document/document";
 
 const Login = lazy(() => import("../pages/login/login"));

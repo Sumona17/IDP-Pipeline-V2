@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import myQueueData from '../../../../../public/data/myQueueData.json';
 import { useGlobalSort } from "../../../utils/global-sort";
+import { fetchMySubmissionList } from '../../../services/submission-list';
 
 
 interface QueueSubmission {
@@ -25,7 +26,10 @@ const MyQueue: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
-  const submissions: QueueSubmission[] = myQueueData.submissions;
+  const [submissions, setSubmissions] = useState<QueueSubmission[]>([]);
+const [loading, setLoading] = useState<boolean>(false);
+const [error, setError] = useState<string | null>(null);
+
 
   // Get unique values for filters
   const statuses = ['All', ...Array.from(new Set(submissions.map(sub => sub.status)))];
@@ -72,6 +76,36 @@ const currentSubmissions = sortedData.slice(startIndex, endIndex);
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, lobFilter, priorityFilter]);
+useEffect(() => {
+  const loadSubmissions = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchMySubmissionList();
+
+     
+      const mappedData: QueueSubmission[] = data.map((item) => ({
+        submissionId: item.submissionId,
+        customerName: item.senderEmail || '-',   
+        lob: item.incomingPath || '-',            
+        status: item.status,
+        dateCreated: item.createdAt,
+        dateModified: item.createdAt,
+        broker: '-',
+        createdBy: item.senderEmail,
+        priority: 'Medium'
+      }));
+
+      setSubmissions(mappedData);
+    } catch (err) {
+      console.error('Error fetching submissions:', err);
+      setError('Failed to load submissions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadSubmissions();
+}, []);
 
   // Status badge styling
   const getStatusColor = (status: string): string => {

@@ -2,6 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import openQueueData from '../../../../../public/data/openQueueData.json';
 import { useNavigate } from 'react-router-dom';
 import { useGlobalSort } from "../../../utils/global-sort";
+import { fetchAllSubmissions } from '../../../services/fetch-all-submission';
+import { updateSubmissionStatus } from '../../../services/status-update';
+import { useAuth } from "react-oidc-context";
+
+
 
 interface QueueDocument {
   id: string;
@@ -24,8 +29,11 @@ const OpenQueue: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
     const navigate = useNavigate();
+const auth = useAuth();
+  const [documents, setDocuments] = useState<QueueDocument[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const documents: QueueDocument[] = openQueueData.documents;
 
   // Get unique values for filters
   const documentSources = ['All', ...Array.from(new Set(documents.map(doc => doc.documentSource)))];
@@ -74,6 +82,44 @@ const OpenQueue: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, sourceFilter, statusFilter, lobFilter]);
 
+
+  useEffect(() => {
+  const loadSubmissions = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchAllSubmissions();
+
+      const mappedData: QueueDocument[] = data.map((item) => ({
+        id: item.submissionId,
+        heading: item.submissionId,
+        productLOB: '-',
+        from: item.senderEmail,
+        customerName: '-',
+        brokerName: '-',
+        emailSubject: '-',
+        dateReceived: item.createdAt,
+        documentSource:
+          item.incomingPath === 'EMAIL_UPLOAD'
+            ? 'Email'
+            : item.incomingPath,
+        status:
+          item.status === 'PENDING'
+            ? 'Pending Review'
+            : item.status,
+      }));
+
+      setDocuments(mappedData);
+    } catch (err) {
+      console.error('Error fetching submissions:', err);
+      setError('Failed to fetch submissions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadSubmissions();
+}, []);
+
   // Status badge styling
   const getStatusColor = (status: string): string => {
     const statusColors: { [key: string]: string } = {
@@ -107,9 +153,35 @@ const OpenQueue: React.FC = () => {
     });
   };
 
-    const handleSubmissionClick = (submissionId: string) => {
+  //   const handleSubmissionClick = (submissionId: string) => {
+  //   navigate(`/uploaded-documents-list/${submissionId}`);
+  // };
+const handleSubmissionClick = async (submissionId: string) => {
+  try {
+    const email = auth.user?.profile?.email as string;
+    const userName = email?.split("@")[0];
+
+    await updateSubmissionStatus({
+      submissionId,
+      status: 'IN-REVIEW',
+      userName,
+      eMail: email
+    });
+
+    setDocuments(prev =>
+      prev.map(doc =>
+        doc.id === submissionId
+          ? { ...doc, status: 'In Progress' }
+          : doc
+      )
+    );
+
     navigate(`/uploaded-documents-list/${submissionId}`);
-  };
+  } catch (error) {
+    console.error('Failed to update status:', error);
+  }
+};
+
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
