@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, type JSX } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSubmissionDocuments, type SubmissionDocument } from '../../services/document-list-service';
 import apiClient from '../../services/handler';
+import { InstanceStepsModal, type InstanceLogStep } from './InstanceStepsModal';
 
 
 interface UploadedDocument {
@@ -15,20 +16,6 @@ interface UploadedDocument {
   extractedDataKey: string;
   originalFileKey: string;
 }
-
-interface InstanceLogStep {
-  id: string;
-  nodeName: string;
-  nodeType?: string;
-  nodeId?: string;
-  status: string;
-  message?: string;
-  executedAt: string;
-  durationFormatted?: string;
-  requestPayload?: unknown;
-  responsePayload?: unknown;
-}
-
 
 const mapToUploadedDocument = (doc: SubmissionDocument): UploadedDocument => ({
   id: doc.documentId,
@@ -117,44 +104,6 @@ const DocumentUploaded: React.FC = () => {
   const handleDownload = (docId: string, docName: string) => {
   };
 
-  const formatPayload = (payload: unknown): string => {
-    if (payload === null || payload === undefined) return '';
-    if (typeof payload === 'string') return payload;
-    try {
-      return JSON.stringify(payload, null, 2);
-    } catch {
-      return String(payload);
-    }
-  };
-
-  const getStepStatusStyle = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'COMPLETED':
-      case 'SUCCESS':
-        return {
-          dot: 'bg-green-500',
-          badge: 'bg-green-100 text-green-700',
-        };
-      case 'FAILED':
-      case 'ERROR':
-        return {
-          dot: 'bg-red-500',
-          badge: 'bg-red-100 text-red-700',
-        };
-      case 'WAITING':
-      case 'PENDING':
-        return {
-          dot: 'bg-amber-500',
-          badge: 'bg-amber-100 text-amber-700',
-        };
-      default:
-        return {
-          dot: 'bg-gray-500',
-          badge: 'bg-gray-100 text-gray-700',
-        };
-    }
-  };
-
   const handleOpenLogs = async (instanceId: string) => {
     setActiveInstanceId(instanceId);
     setShowInstanceStepsModal(true);
@@ -162,10 +111,88 @@ const DocumentUploaded: React.FC = () => {
     setInstanceStepsError(null);
     setInstanceSteps(null);
 
-    console.log(instanceId)
-
     try {
-      const response = await apiClient.get<InstanceLogStep[]>(`/logs/${instanceId}`);
+      // const response = await apiClient.get<InstanceLogStep[]>(`/logs/${instanceId}`);
+      const response = [
+    {
+        "id": "1eb47afa-2c5a-4757-8f0b-acc8a73212f5",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-jzmduj4v",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_WATCHER",
+        "status": "STARTED",
+        "message": "Node started",
+        "requestPayload": null,
+        "responsePayload": null,
+        "executedAt": "2026-02-18T14:49:20.916376",
+        "durationFormatted": null
+    },
+    {
+        "id": "6bbe3c32-71d8-4c14-8b19-f10464d8daad",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-jzmduj4v",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_WATCHER",
+        "status": "COMPLETED",
+        "message": "Document uploaded",
+        "requestPayload": "{\"fileName\": \"Acord140_V2.pdf\", \"fileSize\": 330641}",
+        "responsePayload": "{}",
+        "executedAt": "2026-02-18T14:49:25.917013",
+        "durationFormatted": "5s"
+    },
+    {
+        "id": "eeb4ef5c-5c08-4ea6-81b8-356d8784baf4",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-njgl43fw",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_CLASSIFIER",
+        "status": "STARTED",
+        "message": "Node started",
+        "requestPayload": null,
+        "responsePayload": null,
+        "executedAt": "2026-02-18T14:49:25.942514",
+        "durationFormatted": null
+    },
+    {
+        "id": "59fbc1cf-9b66-49f6-9f2e-388f5f087297",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-njgl43fw",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_CLASSIFIER",
+        "status": "COMPLETED",
+        "message": "Document Classification completed",
+        "requestPayload": "{\"filename\": \"ACORD 140\", \"document_type\": \"pdf_with_images_and_text\"}",
+        "responsePayload": "{}",
+        "executedAt": "2026-02-18T14:49:29.648069",
+        "durationFormatted": "3s"
+    },
+    {
+        "id": "ed57ff36-0f24-4d5f-b973-df59782bb667",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-lickzlke",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_INGESTION",
+        "status": "STARTED",
+        "message": "Node started",
+        "requestPayload": null,
+        "responsePayload": null,
+        "executedAt": "2026-02-18T14:49:29.672516",
+        "durationFormatted": null
+    },
+    {
+        "id": "d8fe5a9a-7868-45ee-b7bd-ef9e7e9f05af",
+        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
+        "nodeId": "task-lickzlke",
+        "nodeType": "task",
+        "nodeName": "DOCUMENT_INGESTION",
+        "status": "COMPLETED",
+        "message": "Document Ingestion Completed",
+        "requestPayload": "{\"documentType\": \"ACORD 140 Property Section\", \"documentExtractedKey\": \"5b41a801-3b46-4262-8245-be9fd3befb70/e71f905a-46a5-4967-9c20-32fb3ddfb48e/Acord140_V2.pdf.json\"}",
+        "responsePayload": "{}",
+        "executedAt": "2026-02-18T14:50:21.184077",
+        "durationFormatted": "51s"
+    }
+]
       setInstanceSteps(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error('Failed to fetch instance logs:', err);
@@ -404,104 +431,19 @@ const DocumentUploaded: React.FC = () => {
         </div>
       </div>
 
-      {showInstanceStepsModal && (
-        <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
-            <div className="bg-white border-b p-6 flex justify-between items-start">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Instance Steps</h2>
-                <p className="text-xs text-gray-500 mt-1">Instance ID: {activeInstanceId ?? '-'}</p>
-              </div>
-              <button onClick={closeLogsModal} className="text-gray-500 hover:text-gray-700" title="Close">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto">
-              {instanceStepsLoading && (
-                <div className="text-sm text-gray-500">Loading steps...</div>
-              )}
-
-              {instanceStepsError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-red-700">{instanceStepsError}</p>
-                </div>
-              )}
-
-              {!instanceStepsLoading && instanceSteps && instanceSteps.length > 0 && (
-                <div className="space-y-4">
-                  {instanceSteps
-                    .slice()
-                    .sort((a, b) => new Date(a.executedAt).getTime() - new Date(b.executedAt).getTime())
-                    .map((step) => {
-                      const style = getStepStatusStyle(step.status);
-                      return (
-                        <div key={step.id} className="relative pl-6">
-                          <div className="absolute left-2 top-2 h-full w-px bg-gray-200" />
-                          <div className={`absolute left-0 top-2 h-3 w-3 rounded-full ${style.dot}`} />
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div>
-                                <div className="text-sm font-semibold text-gray-900">{step.nodeName}</div>
-                                <div className="text-xs text-gray-500">
-                                  {step.nodeType ?? '-'} · {step.nodeId ?? '-'}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {step.durationFormatted ? step.durationFormatted : '0s'}
-                                </div>
-                              </div>
-                              <span className={`text-xs px-2 py-1 rounded-full ${style.badge}`}>
-                                {step.status}
-                              </span>
-                            </div>
-                            <div className="mt-2 text-sm text-gray-700">{step.message ?? '-'}</div>
-                            <div className="mt-2 text-xs text-gray-500">
-                              {step.executedAt ? new Date(step.executedAt).toLocaleString() : '-'}
-                            </div>
-                            {(step.requestPayload || step.responsePayload) && (
-                              <div className="mt-3 space-y-2">
-                                {step.requestPayload && (
-                                  <details className="bg-white border border-gray-200 rounded-md">
-                                    <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
-                                      Request Payload
-                                    </summary>
-                                    <pre className="text-xs overflow-x-auto text-gray-700 px-3 pb-3">
-                                      {formatPayload(step.requestPayload)}
-                                    </pre>
-                                  </details>
-                                )}
-                                {step.responsePayload && (
-                                  <details className="bg-white border border-gray-200 rounded-md">
-                                    <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
-                                      Response Payload
-                                    </summary>
-                                    <pre className="text-xs overflow-x-auto text-gray-700 px-3 pb-3">
-                                      {formatPayload(step.responsePayload)}
-                                    </pre>
-                                  </details>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-
-              {!instanceStepsLoading && instanceSteps && instanceSteps.length === 0 && (
-                <div className="text-sm text-gray-500">No steps found for this instance.</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <InstanceStepsModal
+        isOpen={showInstanceStepsModal}
+        activeInstanceId={activeInstanceId}
+        instanceSteps={instanceSteps}
+        instanceStepsLoading={instanceStepsLoading}
+        instanceStepsError={instanceStepsError}
+        onClose={closeLogsModal}
+      />
     </>
   );
 };
 
 export default DocumentUploaded;
+
 
 
