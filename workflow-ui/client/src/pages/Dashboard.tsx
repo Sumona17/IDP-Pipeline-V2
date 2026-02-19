@@ -124,21 +124,21 @@ export const Dashboard = () => {
   useEffect(() => {
     const filterByCommon = (
       items: any[],
-      options: { nameKey?: string; dateKey?: string },
+      options: { dateKey?: string; getSearchValue?: (item: any) => string },
     ) => {
       let filtered = items;
-      const nameKey = options.nameKey ?? "name";
       const dateKey = options.dateKey ?? "createdAt";
+      const getSearchValue =
+        options.getSearchValue ??
+        ((item: any) =>
+          String(
+            item?.name ?? item?.workflowDefinition?.name ?? item?.workflowName ?? "",
+          ));
 
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         filtered = filtered.filter((item) => {
-          const name =
-            item?.[nameKey] ??
-            item?.workflowDefinition?.name ??
-            item?.workflowName ??
-            "";
-          return String(name).toLowerCase().includes(term);
+          return getSearchValue(item).toLowerCase().startsWith(term);
         });
       }
 
@@ -160,14 +160,17 @@ export const Dashboard = () => {
 
     setFilteredWorkflows(
       filterByCommon(allWorkflows || [], {
-        nameKey: "name",
         dateKey: "createdAt",
+        getSearchValue: (item) =>
+          String(
+            item?.name ?? item?.workflowDefinition?.name ?? item?.workflowName ?? "",
+          ),
       }),
     );
     setFilteredExecutions(
       filterByCommon(allInstances || [], {
-        nameKey: "workflowName",
         dateKey: "startedAt",
+        getSearchValue: (item) => String(item?.instanceId ?? item?.id ?? ""),
       }),
     );
   }, [allWorkflows, allInstances, searchTerm, statusFilter, dateFilter]);
@@ -286,6 +289,7 @@ export const Dashboard = () => {
       <FiltersBar
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        selectedTab={selectedTab}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
         dateFilter={dateFilter}

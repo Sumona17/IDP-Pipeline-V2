@@ -55,7 +55,7 @@ export const InstancesTable = ({
                   onClick={() => openInstanceSteps(instance)}
                 >
                   <td className="px-6 py-2 text-sm font-medium text-gray-900">
-                    {instance && instance.instanceId.slice(0, 8)}
+                    {instance && instance.instanceId}
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
                     {instance && instance.workflowName}
