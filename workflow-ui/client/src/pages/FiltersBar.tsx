@@ -3,6 +3,7 @@ import { RefreshCw, Download } from "lucide-react";
 interface FiltersBarProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
+  selectedTab: "workflows" | "instances";
   statusFilter: string;
   setStatusFilter: (value: string) => void;
   dateFilter: string;
@@ -15,6 +16,7 @@ interface FiltersBarProps {
 export const FiltersBar = ({
   searchTerm,
   setSearchTerm,
+  selectedTab,
   statusFilter,
   setStatusFilter,
   dateFilter,
@@ -29,7 +31,11 @@ export const FiltersBar = ({
         <div>
           <input
             type="text"
-            placeholder="Search by workflow name..."
+            placeholder={
+              selectedTab === "instances"
+                ? "Search by instance ID..."
+                : "Search by workflow name..."
+            }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
