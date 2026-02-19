@@ -140,6 +140,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                             .originalFileKey(getString(m, "s3Key"))
                             .extractedDataKey(getString(m, "extractedDataS3Key"))
                             .fileSize(formatFileSize((getValue(m, "fileSize"))))
+                            .fileProgress(getValue(m, "fileProgress"))
                             .build();
                 })
                 .collect(Collectors.toList());
