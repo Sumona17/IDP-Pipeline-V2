@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, type JSX } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import documentUploadedData from '../../../../public/data/uploadedDocumentData.json';
+import { getSubmissionDocuments, type SubmissionDocument } from '../../services/document-list-service';
+
 
 interface UploadedDocument {
   id: string;
@@ -10,21 +11,53 @@ interface UploadedDocument {
   confidence: number;
   createdAt: string;
   documentSize: string;
+  extractedDataKey: string;
+  originalFileKey: string;
 }
+
+const mapToUploadedDocument = (doc: SubmissionDocument): UploadedDocument => ({
+  id: doc.documentId,
+  documentName: doc.fileName,
+  documentType: doc.documentType,
+  extractedDataKey: doc.extractedDataKey,
+  originalFileKey: doc.originalFileKey,
+  documentSize: doc.fileSize,
+  customerName: '-',
+  confidence: 0,
+  createdAt: new Date().toISOString(),
+});
 
 const DocumentUploaded: React.FC = () => {
   const navigate = useNavigate();
   const { submissionId } = useParams<{ submissionId?: string }>();
+
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
-  const documents: UploadedDocument[] = documentUploadedData.documents;
-
   useEffect(() => {
-    if (submissionId) console.log('Viewing documents for submission:', submissionId);
+    if (!submissionId) return;
+
+    const fetchDocuments = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const data = await getSubmissionDocuments(submissionId);
+        setDocuments(data.map(mapToUploadedDocument));
+      } catch (err) {
+        console.error('Failed to fetch submission documents:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load documents');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDocuments();
   }, [submissionId]);
 
   const documentTypes = ['All', ...Array.from(new Set(documents.map(d => d.documentType)))];
@@ -59,19 +92,14 @@ const DocumentUploaded: React.FC = () => {
       hour: '2-digit', minute: '2-digit',
     });
 
-  const handleView = (docId: string) =>
-    window.open(`/api/documents/${docId}/view`, '_blank');
+  const handleView = (docId: string) => {};
 
   const handleDownload = (docId: string, docName: string) => {
-    const link = document.createElement('a');
-    link.href = `/api/documents/${docId}/download`;
-    link.download = docName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
-  const handleDocumentClick = () => navigate('/document-review');
+  const handleDocumentClick = (doc: UploadedDocument) => {
+    navigate(`/document-review/${encodeURIComponent(doc.extractedDataKey)}/${encodeURIComponent(doc.originalFileKey)}`);
+  }
 
   const getFileIcon = (filename: string): JSX.Element => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -86,9 +114,29 @@ const DocumentUploaded: React.FC = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600 mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Loading documents...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="h-full flex flex-col overflow-hidden">
+        {error && (
+          <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-2 flex-shrink-0">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
+        )}
+
         <div className="px-0 pt-2 pb-1.5 flex-shrink-0">
           <div className="flex items-end gap-2">
             <div className="flex-1 grid grid-cols-4 gap-2">
@@ -131,6 +179,7 @@ const DocumentUploaded: React.FC = () => {
             </button>
           </div>
         </div>
+
         <div className="flex-1 overflow-hidden px-0 pb-3">
           <div className="border border-gray-200 rounded flex flex-col overflow-hidden">
             <div className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-280px)]">
@@ -163,7 +212,7 @@ const DocumentUploaded: React.FC = () => {
                           <div className="flex items-center space-x-2 min-w-0">
                             {getFileIcon(doc.documentName)}
                             <button
-                              onClick={() => handleDocumentClick()}
+                              onClick={() => handleDocumentClick(doc)}
                               className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline truncate block text-left flex-1 min-w-0"
                             >
                               {doc.documentName}
