@@ -79,8 +79,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
         <div className="bg-white border-b p-6 flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Instance Steps</h2>
-            <p className="text-xs text-gray-500 mt-1">Instance ID: {activeInstanceId ?? '-'}</p>
+            <h2 className="text-2xl font-bold text-gray-900">Audit Trail</h2>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700" title="Close">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,10 +112,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                         <div>
                           <div className="text-sm font-semibold text-gray-900">{step.nodeName}</div>
                           <div className="text-xs text-gray-500">
-                            {step.nodeType ?? '-'} - {step.nodeId ?? '-'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {step.durationFormatted ? step.durationFormatted : '0s'}
+                            {step.durationFormatted ? step.durationFormatted : ''}
                           </div>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${style.badge}`}>

@@ -2,7 +2,9 @@ import React, { useState, useMemo, useEffect, type JSX } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSubmissionDocuments, type SubmissionDocument } from '../../services/document-list-service';
 import { InstanceStepsModal, type InstanceLogStep } from './InstanceStepsModal';
+import { workflowBaseURL } from '../../config/configuration';
 import { fetchDocument } from '../../services/documnet-view-service';
+import apiClient from '../../services/handler';
 
 
 interface UploadedDocument {
@@ -131,6 +133,7 @@ const DocumentUploaded: React.FC = () => {
   };
 
   const handleOpenLogs = async (instanceId: string) => {
+
     setActiveInstanceId(instanceId);
     setShowInstanceStepsModal(true);
     setInstanceStepsLoading(true);
@@ -138,87 +141,7 @@ const DocumentUploaded: React.FC = () => {
     setInstanceSteps(null);
 
     try {
-      // const response = await apiClient.get<InstanceLogStep[]>(`/logs/${instanceId}`);
-      const response = [
-    {
-        "id": "1eb47afa-2c5a-4757-8f0b-acc8a73212f5",
-        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
-        "nodeId": "task-jzmduj4v",
-        "nodeType": "task",
-        "nodeName": "DOCUMENT_WATCHER",
-        "status": "STARTED",
-        "message": "Node started",
-        "requestPayload": null,
-        "responsePayload": null,
-        "executedAt": "2026-02-18T14:49:20.916376",
-        "durationFormatted": null
-    },
-    {
-        "id": "6bbe3c32-71d8-4c14-8b19-f10464d8daad",
-        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
-        "nodeId": "task-jzmduj4v",
-        "nodeType": "task",
-        "nodeName": "DOCUMENT_WATCHER",
-        "status": "COMPLETED",
-        "message": "Document uploaded",
-        "requestPayload": "{\"fileName\": \"Acord140_V2.pdf\", \"fileSize\": 330641}",
-        "responsePayload": "{}",
-        "executedAt": "2026-02-18T14:49:25.917013",
-        "durationFormatted": "5s"
-    },
-    {
-        "id": "eeb4ef5c-5c08-4ea6-81b8-356d8784baf4",
-        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
-        "nodeId": "task-njgl43fw",
-        "nodeType": "task",
-        "nodeName": "DOCUMENT_CLASSIFIER",
-        "status": "STARTED",
-        "message": "Node started",
-        "requestPayload": null,
-        "responsePayload": null,
-        "executedAt": "2026-02-18T14:49:25.942514",
-        "durationFormatted": null
-    },
-    {
-        "id": "59fbc1cf-9b66-49f6-9f2e-388f5f087297",
-        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
-        "nodeId": "task-njgl43fw",
-        "nodeType": "task",
-        "nodeName": "DOCUMENT_CLASSIFIER",
-        "status": "COMPLETED",
-        "message": "Document Classification completed",
-        "requestPayload": "{\"filename\": \"ACORD 140\", \"document_type\": \"pdf_with_images_and_text\"}",
-        "responsePayload": "{}",
-        "executedAt": "2026-02-18T14:49:29.648069",
-        "durationFormatted": "3s"
-    },
-    {
-        "id": "ed57ff36-0f24-4d5f-b973-df59782bb667",
-        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
-        "nodeId": "task-lickzlke",
-        "nodeType": "task",
-        "nodeName": "DOCUMENT_INGESTION",
-        "status": "STARTED",
-        "message": "Node started",
-        "requestPayload": null,
-        "responsePayload": null,
-        "executedAt": "2026-02-18T14:49:29.672516",
-        "durationFormatted": null
-    },
-    {
-        "id": "d8fe5a9a-7868-45ee-b7bd-ef9e7e9f05af",
-        "workflowInstanceId": "e71f905a-46a5-4967-9c20-32fb3ddfb48e",
-        "nodeId": "task-lickzlke",
-        "nodeType": "task",
-        "nodeName": "DOCUMENT_INGESTION",
-        "status": "COMPLETED",
-        "message": "Document Ingestion Completed",
-        "requestPayload": "{\"documentType\": \"ACORD 140 Property Section\", \"documentExtractedKey\": \"5b41a801-3b46-4262-8245-be9fd3befb70/e71f905a-46a5-4967-9c20-32fb3ddfb48e/Acord140_V2.pdf.json\"}",
-        "responsePayload": "{}",
-        "executedAt": "2026-02-18T14:50:21.184077",
-        "durationFormatted": "51s"
-    }
-]
+      const response = await apiClient.get<InstanceLogStep[]>(`${workflowBaseURL}/logs/${instanceId}`);
       setInstanceSteps(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error('Failed to fetch instance logs:', err);
