@@ -5,6 +5,7 @@ import { fetchAllSubmissions } from "../../../services/fetch-all-submission";
 import { updateSubmissionStatus } from "../../../services/status-update";
 import { useAuth } from "react-oidc-context";
 interface ApiSubmission {
+  documentSource?: string;
   submissionId: string;
   incomingPath: string;
   status: string;
@@ -53,16 +54,13 @@ const OpenQueue: React.FC = () => {
     return sortedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [sortedData, currentPage]);
 
-  const formatSubmissionId = (id: string): string => {
-    if (id.length <= 12) return id;
-    return `${id.slice(0, 6)}...${id.slice(-4)}`;
-  };
+  const formatSubmissionId = (id: string) => id.slice(0, 8);
 
   const mapSubmission = useCallback(
     (item: ApiSubmission): QueueDocument => ({
       id: item.submissionId,
       documentSource:
-        item.incomingPath === "EMAIL_UPLOAD" ? "Email" : item.incomingPath,
+        item.documentSource === "EMAIL_UPLOAD" ? "Email" : item.documentSource,
       status:
         item.status === "PENDING"
           ? "Pending Review"
@@ -133,7 +131,7 @@ const OpenQueue: React.FC = () => {
                     className="px-3 py-2 text-left text-xs font-semibold uppercase"
                   />
                 ))}
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase">
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">
                   Actions
                 </th>
               </tr>
@@ -154,7 +152,7 @@ const OpenQueue: React.FC = () => {
                 </tr>
               ) : (
                 currentDocuments.map((doc) => (
-                  <tr key={doc.id} className="border-t hover:bg-gray-50">
+                  <tr key={doc.id} className=" hover:bg-gray-50">
                     <td className="px-3 py-2">
                       <button
                         onClick={() => handleSubmissionClick(doc.id)}
