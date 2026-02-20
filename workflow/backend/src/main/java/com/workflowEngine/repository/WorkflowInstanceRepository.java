@@ -17,7 +17,6 @@ public interface WorkflowInstanceRepository
         SELECT new com.workflowEngine.dto.workflowExecution.WorkflowInstanceView(
             i.id,
             d.id,
-            d.name,
             i.status,
             i.currentNodeName,
             i.startedAt,
