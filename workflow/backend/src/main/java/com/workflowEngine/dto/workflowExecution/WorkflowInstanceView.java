@@ -6,7 +6,6 @@ public class WorkflowInstanceView {
 
     private String instanceId;
     private String workflowId;
-    private String workflowName;
     private String status;
     private String currentNodeName;
     private LocalDateTime startedAt;
@@ -17,7 +16,6 @@ public class WorkflowInstanceView {
     public WorkflowInstanceView(
             String instanceId,
             String workflowId,
-            String workflowName,
             String status,
             String currentNodeName,
             LocalDateTime startedAt,
@@ -25,7 +23,6 @@ public class WorkflowInstanceView {
     ) {
         this.instanceId = instanceId;
         this.workflowId = workflowId;
-        this.workflowName = workflowName;
         this.status = status;
         this.startedAt = startedAt;
         this.completedAt = completedAt;
@@ -38,10 +35,6 @@ public class WorkflowInstanceView {
 
     public String getWorkflowId() {
         return workflowId;
-    }
-
-    public String getWorkflowName() {
-        return workflowName;
     }
 
     public String getStatus() {
