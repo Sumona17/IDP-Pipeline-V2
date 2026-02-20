@@ -30,11 +30,13 @@ interface RowEdit {
 }
 
 const DocumentComparison: React.FC = () => {
-  const { extractedDataKey: encodedDataKey, originalFileKey: encodedFileKey } =
-    useParams<{ extractedDataKey: string; originalFileKey: string }>();
+  const { submissionId, documentId, extractedDataKey: encodedDataKey, originalFileKey: encodedFileKey } = useParams<{ submissionId: string; documentId: string; extractedDataKey: string; originalFileKey: string }>();
 
   const extractedDataKey = decodeURIComponent(encodedDataKey ?? '');
   const originalFileKey  = decodeURIComponent(encodedFileKey ?? '');
+
+  console.log("documentId::", documentId);
+  
 
   const [apiResponse, setApiResponse]             = useState<any>(null);
   const [encodedPdfData, setEncodedPdfData]       = useState<string>('');
@@ -86,7 +88,7 @@ const DocumentComparison: React.FC = () => {
   const getHighlightColor = (confidenceScore: number | null): string => {
     const score = Number(confidenceScore);
     if (!score || score < CONFIDENCE_THRESHOLD) return '#EF4444';
-    return '#0891B2';
+    return '#3C20F6';
   };
 
   const formatLabel = (key: string): string => {
@@ -175,128 +177,85 @@ const DocumentComparison: React.FC = () => {
       setIsDataLoading(true);
       setDataError('');
       try {
-        const data = await getValidateData({ extractedDataKey, originalFileKey }) as any;
+        const data = await getValidateData({ submissionId, documentId, extractedDataKey, originalFileKey }) as any;
         setApiResponse(data);
-        if (data?.encodedPdfData) {
-          setEncodedPdfData(data.encodedPdfData);
-        }
+        if (data?.encodedPdfData) setEncodedPdfData(data.encodedPdfData);
       } catch (error) {
         setDataError(error instanceof Error ? error.message : 'Failed to load extracted data');
       } finally {
         setIsDataLoading(false);
       }
     };
-
     if (extractedDataKey && originalFileKey) loadData();
   }, [extractedDataKey, originalFileKey]);
 
   useEffect(() => {
     if (!encodedPdfData) return;
-
     const loadPdf = async () => {
       setIsPdfLoading(true);
       setPdfError('');
       try {
         const pdfjs = await import('pdfjs-dist');
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          'pdfjs-dist/build/pdf.worker.mjs',
-          import.meta.url
-        ).toString();
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
         pdfjsRef.current = pdfjs;
-
         const pdfBytes = base64ToUint8Array(encodedPdfData);
-
-        const loadingTask = pdfjs.getDocument({
-          data: pdfBytes,
-          useWorkerFetch: false,
-          isEvalSupported: false,
-          useSystemFonts: true,
-        });
-
+        const loadingTask = pdfjs.getDocument({ data: pdfBytes, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true });
         const pdf = await loadingTask.promise;
         pdfDocRef.current = pdf;
         setTotalPages(pdf.numPages);
-
-        const page          = await pdf.getPage(1);
+        const page = await pdf.getPage(1);
         const naturalWidth  = page.view[2];
         const naturalHeight = page.view[3];
         setNaturalPageSize({ width: naturalWidth, height: naturalHeight });
-
         const container = containerRef.current;
         if (container) {
           const { width: clientWidth } = container.getBoundingClientRect();
           setBaseScale((clientWidth - 40) / naturalWidth);
         }
       } catch (error: any) {
-        let errorMessage = 'Failed to load PDF';
-        if (error.name === 'InvalidPDFException') {
-          errorMessage = 'Invalid PDF file';
-        } else {
-          errorMessage = error.message || 'Unknown error loading PDF';
-        }
-        setPdfError(errorMessage);
+        setPdfError(error.name === 'InvalidPDFException' ? 'Invalid PDF file' : error.message || 'Unknown error loading PDF');
       } finally {
         setIsPdfLoading(false);
       }
     };
-
     loadPdf();
   }, [encodedPdfData]);
 
   const renderAllPDFPages = async () => {
     if (!pdfDocRef.current || !containerRef.current) return;
-
-    Object.values(renderTasksRef.current).forEach((task: any) => {
-      if (task && task.cancel) task.cancel();
-    });
+    Object.values(renderTasksRef.current).forEach((task: any) => { if (task?.cancel) task.cancel(); });
     renderTasksRef.current = {};
-
     try {
-      const currentScale     = baseScale * zoom;
+      const currentScale = baseScale * zoom;
       const newRenderedPages: Record<number, any> = {};
-
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
         const page     = await pdfDocRef.current.getPage(pageNum);
         const canvas   = document.createElement('canvas');
         const context  = canvas.getContext('2d', { alpha: false });
         const viewport = page.getViewport({ scale: currentScale * DPI_SCALE });
-
         canvas.height = viewport.height;
         canvas.width  = viewport.width;
         context!.fillStyle = 'white';
         context!.fillRect(0, 0, canvas.width, canvas.height);
-
         const displayWidth  = viewport.width  / DPI_SCALE;
         const displayHeight = viewport.height / DPI_SCALE;
-
         canvas.style.width           = `${displayWidth}px`;
         canvas.style.height          = `${displayHeight}px`;
         canvas.style.display         = 'block';
         canvas.style.marginBottom    = '16px';
         canvas.style.border          = '1px solid #E5E7EB';
-        canvas.style.boxShadow       = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)';
+        canvas.style.boxShadow       = '0 4px 6px -1px rgba(0,0,0,0.1)';
         canvas.style.backgroundColor = 'white';
         canvas.style.borderRadius    = '8px';
-
         const renderTask = page.render({ canvasContext: context!, viewport });
         renderTasksRef.current[pageNum] = renderTask;
-
         try {
           await renderTask.promise;
-          newRenderedPages[pageNum] = {
-            canvas,
-            viewport,
-            pageHeight:   displayHeight,
-            pageWidth:    displayWidth,
-            displayScale: currentScale,
-          };
+          newRenderedPages[pageNum] = { canvas, viewport, pageHeight: displayHeight, pageWidth: displayWidth, displayScale: currentScale };
         } catch (err: any) {
-          if (err.name !== 'RenderingCancelledException') {
-            console.error('Rendering error:', err);
-          }
+          if (err.name !== 'RenderingCancelledException') console.error('Rendering error:', err);
         }
       }
-
       setRenderedPages(newRenderedPages);
     } catch (error) {
       console.error('Error rendering PDF:', error);
@@ -324,11 +283,7 @@ const DocumentComparison: React.FC = () => {
     if (record.isSection) return;
     setSelectedField(record);
     if (record.boundingBox && record.page) {
-      setHighlightBox({
-        ...record.boundingBox,
-        page: record.page,
-        confidenceScore: getHighlightColor(record.confidence),
-      });
+      setHighlightBox({ ...record.boundingBox, page: record.page, confidenceScore: getHighlightColor(record.confidence) });
       setCurrentPage(record.page);
       setTimeout(() => scrollToHighlight(record.boundingBox!, record.page), 200);
     } else {
@@ -349,25 +304,19 @@ const DocumentComparison: React.FC = () => {
     const boxHeight          = bbox.Height * canvasHeight;
     const absoluteHighlightY = cumulativeHeight + top + boxHeight / 2;
     const containerHeight    = pdfScrollRef.current.getBoundingClientRect().height;
-    pdfScrollRef.current.scrollTo({
-      top:      Math.max(0, absoluteHighlightY - containerHeight / 2),
-      behavior: 'smooth',
-    });
+    pdfScrollRef.current.scrollTo({ top: Math.max(0, absoluteHighlightY - containerHeight / 2), behavior: 'smooth' });
   };
 
   const renderHighlightBox = () => {
     if (!highlightBox || Object.keys(renderedPages).length === 0 || !highlightBox.page) return null;
-
     const targetPage = highlightBox.page;
     const pageData   = renderedPages[targetPage];
     if (!pageData) return null;
-
     let cumulativeHeight = 0;
     for (let i = 1; i < targetPage; i++) {
       const prev = renderedPages[i];
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
-
     const currentScale = baseScale * zoom;
     const canvasWidth  = naturalPageSize.width  * currentScale;
     const canvasHeight = naturalPageSize.height * currentScale;
@@ -377,22 +326,13 @@ const DocumentComparison: React.FC = () => {
     const boxHeight    = highlightBox.Height * canvasHeight;
     const absoluteTop  = cumulativeHeight + top;
     const borderColor  = highlightBox.confidenceScore;
-
     return (
       <div
         className="absolute pointer-events-none border-[3px] transition-all rounded"
-        style={{
-          left:            `${left - 4}px`,
-          top:             `${absoluteTop - 4}px`,
-          width:           `${boxWidth + 8}px`,
-          height:          `${boxHeight + 8}px`,
-          borderColor:     borderColor,
-          backgroundColor: `${borderColor}20`,
-          zIndex:          30,
-        }}
+        style={{ left: `${left - 4}px`, top: `${absoluteTop - 4}px`, width: `${boxWidth + 8}px`, height: `${boxHeight + 8}px`, borderColor, backgroundColor: `${borderColor}20`, zIndex: 30 }}
       >
         {selectedField && (
-          <div className="absolute -top-9 left-0 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap">
+          <div className="absolute -top-9 left-0 bg-[#3C20F6] text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap">
             <span className="flex items-center gap-1.5">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -408,27 +348,19 @@ const DocumentComparison: React.FC = () => {
   const handleReviewChange = (checked: boolean, record: TableRow) => {
     setRowEdits((prev) => ({
       ...prev,
-      [record.key]: {
-        review:        checked,
-        overrideValue: prev[record.key]?.overrideValue || record.value || '',
-      },
+      [record.key]: { review: checked, overrideValue: prev[record.key]?.overrideValue || record.value || '' },
     }));
   };
 
   const handleOverrideChange = (value: string, record: TableRow) => {
-    setRowEdits((prev) => ({
-      ...prev,
-      [record.key]: { review: true, overrideValue: value },
-    }));
+    setRowEdits((prev) => ({ ...prev, [record.key]: { review: true, overrideValue: value } }));
   };
 
   const handleExportData = () => {
     const blob = new Blob([JSON.stringify(apiResponse?.extractedData ?? apiResponse, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href     = url;
-    link.download = 'extracted-data.json';
-    link.click();
+    link.href = url; link.download = 'extracted-data.json'; link.click();
     URL.revokeObjectURL(url);
   };
 
@@ -438,31 +370,20 @@ const DocumentComparison: React.FC = () => {
     const blob  = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
     const url   = URL.createObjectURL(blob);
     const link  = document.createElement('a');
-    link.href     = url;
-    link.download = 'document.pdf';
-    link.click();
+    link.href = url; link.download = 'document.pdf'; link.click();
     URL.revokeObjectURL(url);
   };
 
-  const buildTableRows = (): TableRow[] => {
-    if (!apiResponse) return [];
-    return flattenData(apiResponse);
-  };
+  const buildTableRows  = (): TableRow[] => (!apiResponse ? [] : flattenData(apiResponse));
 
   const getFilteredRows = (): TableRow[] => {
     const allRows = buildTableRows();
     return allRows.filter((row) => {
       const searchLower   = searchText.toLowerCase();
-      const matchesSearch =
-        !searchText ||
-        row.field.toLowerCase().includes(searchLower) ||
-        row.value.toLowerCase().includes(searchLower);
-
+      const matchesSearch = !searchText || row.field.toLowerCase().includes(searchLower) || row.value.toLowerCase().includes(searchLower);
       if (row.isSection) return matchesSearch;
-
       const score = row.confidence;
       let matchesConfidence = true;
-
       if (confidenceFilter !== 'all' && score !== null) {
         switch (confidenceFilter) {
           case 'below_50': matchesConfidence = score < 50; break;
@@ -473,7 +394,6 @@ const DocumentComparison: React.FC = () => {
           case '90_above': matchesConfidence = score >= 90; break;
         }
       }
-
       return matchesSearch && matchesConfidence;
     });
   };
@@ -482,123 +402,124 @@ const DocumentComparison: React.FC = () => {
 
   if (isPdfLoading || isDataLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center max-w-md bg-white p-8 rounded-2xl shadow-xl">
-          <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-cyan-600 mx-auto mb-6" />
-          <p className="text-xl font-bold text-gray-800 mb-3">Loading Document Review</p>
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#3C20F6] mx-auto mb-5" />
+          <p className="text-lg font-semibold text-gray-800 mb-1">Loading Document Review</p>
+          <p className="text-sm text-gray-400">Please wait while we prepare your document...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-md">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-cyan-700 bg-clip-text text-transparent">
-                  Document Review
-                </h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {apiResponse?.extractedData?.documentType ?? 'Review and validate extracted document data'}
-                </p>
-              </div>
-            </div>
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
 
-            <div className="flex flex-col gap-1">
-              {dataError && (
-                <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                  ⚠️ Data error: {dataError}
-                </p>
-              )}
-              {pdfError && (
-                <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                  ⚠️ PDF error: {pdfError}
-                </p>
-              )}
-            </div>
-
-            <button
-              onClick={handleExportData}
-              className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-lg hover:from-cyan-700 hover:to-cyan-800 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2.5"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12" />
+      {/* ── Top bar ────────────────────────────────────────── */}
+      <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+        <div className="px-6 py-4 flex items-center justify-between">
+          {/* Left: icon + title */}
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#E6DAFF] rounded-xl">
+              <svg className="w-5 h-5 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Export Data
-            </button>
+            </div>
+            <div>
+              <h1 className="text-[18px] font-semibold text-gray-900">Document Review</h1>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {apiResponse?.extractedData?.documentType ?? 'Review and validate extracted document data'}
+              </p>
+            </div>
           </div>
+
+          {/* Center: errors */}
+          <div className="flex flex-col gap-1">
+            {dataError && (
+              <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ Data: {dataError}</p>
+            )}
+            {pdfError && (
+              <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ PDF: {pdfError}</p>
+            )}
+          </div>
+
+          {/* Right: export */}
+          <button
+            onClick={handleExportData}
+            className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12" />
+            </svg>
+            Export Data
+          </button>
         </div>
       </div>
 
+      {/* ── Main panels ────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden gap-4 p-4">
-        <div className="w-[58%] bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-shrink-0">
-                <select
-                  value={confidenceFilter}
-                  onChange={(e) => setConfidenceFilter(e.target.value)}
-                  className="pl-4 pr-10 py-2.5 text-sm font-medium border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white shadow-sm appearance-none cursor-pointer hover:border-gray-400 transition-colors"
-                >
-                  <option value="all">All Confidence %</option>
-                  <option value="below_50">Below 50%</option>
-                  <option value="50_75">50% - 75%</option>
-                  <option value="75_80">75% - 80%</option>
-                  <option value="80_85">80% - 85%</option>
-                  <option value="85_90">85% - 90%</option>
-                  <option value="90_above">90% & Above</option>
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
 
-              <div className="relative flex-1">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search extracted data..."
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent shadow-sm hover:border-gray-400 transition-colors"
-                />
+        {/* ── Left: data table ─────────────────────────────── */}
+        <div className="w-[45%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+
+          {/* Filters */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+            <div className="relative flex-shrink-0">
+              <select
+                value={confidenceFilter}
+                onChange={(e) => setConfidenceFilter(e.target.value)}
+                className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent bg-white appearance-none cursor-pointer outline-none"
+              >
+                <option value="all">All Confidence %</option>
+                <option value="below_50">Below 50%</option>
+                <option value="50_75">50% – 75%</option>
+                <option value="75_80">75% – 80%</option>
+                <option value="80_85">80% – 85%</option>
+                <option value="85_90">85% – 90%</option>
+                <option value="90_above">90% & Above</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
+            </div>
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search extracted data..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent outline-none"
+              />
             </div>
           </div>
 
+          {/* Table */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             <table className="w-full border-collapse text-sm">
-              <thead className="bg-gradient-to-r from-cyan-50 to-cyan-100 sticky top-0 z-10 shadow-sm">
+              <thead className="bg-[#E6DAFF] sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[20%]">Document Provision</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[20%]">Extracted Value</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[10%]">Confidence</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[8%]">Review</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-cyan-900 border-b-2 border-cyan-200 w-[22%]">Override Value</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[20%]">Document Provision</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[20%]">Extracted Value</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[10%]">Confidence</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[8%]">Review</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[22%]">Override Value</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-white divide-y divide-gray-50">
                 {filteredRows.map((record) => {
                   if (record.isSection) {
                     return (
-                      <tr key={record.key} className="bg-gradient-to-r from-gray-50 to-gray-100">
-                        <td colSpan={5} className="px-4 py-3 font-bold text-cyan-900 text-sm border-l-4 border-cyan-500">
+                      <tr key={record.key} className="bg-gray-50">
+                        <td colSpan={5} className="px-4 py-2.5 font-semibold text-[#3C20F6] text-xs border-l-4 border-[#3C20F6]">
                           <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             {record.field}
@@ -618,24 +539,18 @@ const DocumentComparison: React.FC = () => {
                       onClick={() => handleRowClick(record)}
                       className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
                         selectedField?.key === record.key
-                          ? 'bg-cyan-50 border-l-4 border-l-cyan-600 shadow-md'
+                          ? 'bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]'
                           : 'hover:bg-gray-50 border-l-4 border-l-transparent'
                       }`}
                     >
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.field}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{record.value}</td>
+                      <td className="px-4 py-3 text-xs font-medium text-gray-900">{record.field}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700">{record.value}</td>
                       <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${getConfidenceColor(record.confidence)} ${
-                            record.confidence !== null && record.confidence >= 95
-                              ? 'bg-emerald-100'
-                              : record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD
-                              ? 'bg-amber-100'
-                              : record.confidence !== null
-                              ? 'bg-red-100'
-                              : 'bg-gray-100'
-                          }`}
-                        >
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
+                          record.confidence !== null && record.confidence >= 95 ? 'bg-emerald-100' :
+                          record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
+                          record.confidence !== null ? 'bg-red-100' : 'bg-gray-100'
+                        }`}>
                           {record.confidencePercent !== '-' ? `${record.confidencePercent}%` : '-'}
                         </span>
                       </td>
@@ -644,7 +559,7 @@ const DocumentComparison: React.FC = () => {
                           type="checkbox"
                           checked={isReviewed}
                           onChange={(e) => handleReviewChange(e.target.checked, record)}
-                          className="w-4.5 h-4.5 text-cyan-600 rounded border-2 border-gray-300 focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 cursor-pointer"
+                          className="w-4 h-4 text-[#3C20F6] rounded border-2 border-gray-300 focus:ring-2 focus:ring-[#3C20F6] focus:ring-offset-1 cursor-pointer accent-[#3C20F6]"
                         />
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -654,7 +569,7 @@ const DocumentComparison: React.FC = () => {
                           value={overrideValue}
                           onChange={(e) => handleOverrideChange(e.target.value, record)}
                           placeholder="Override value"
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors shadow-sm"
+                          className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed outline-none transition-colors"
                         />
                       </td>
                     </tr>
@@ -665,23 +580,27 @@ const DocumentComparison: React.FC = () => {
           </div>
         </div>
 
-        <div className="w-[42%] bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden">
-          <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 px-6 py-4">
-            <div className="flex items-center justify-between mb-3">
+        {/* ── Right: PDF viewer ────────────────────────────── */}
+        <div className="w-[55%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+
+          {/* PDF toolbar */}
+          <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
+            <div className="flex items-center justify-between mb-2">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                   Document
                 </h2>
-                <p className="text-sm text-gray-500 mt-0.5">Total Pages: {totalPages}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Total Pages: {totalPages}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-white p-2 rounded-md border border-gray-200 shadow-sm text-xs">
+            {/* Zoom controls */}
+            <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-xs">
               <div className="flex items-center gap-1 font-semibold text-gray-700">
-                <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded">
+                <span className="px-2 py-0.5 bg-[#E6DAFF] text-[#3C20F6] rounded-full text-xs font-medium">
                   {String(currentPage).padStart(2, '0')}
                 </span>
                 <span className="text-gray-400">/</span>
@@ -692,24 +611,20 @@ const DocumentComparison: React.FC = () => {
                 <button
                   onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
                   disabled={zoom <= 0.25}
-                  className="p-1.5 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  className="p-1 rounded border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                   </svg>
                 </button>
 
-                <div className="flex-1 flex items-center gap-1">
+                <div className="flex-1 flex items-center gap-1.5">
                   <input
-                    type="range"
-                    min="0.25"
-                    max="4"
-                    step="0.25"
-                    value={zoom}
+                    type="range" min="0.25" max="4" step="0.25" value={zoom}
                     onChange={(e) => setZoom(Number(e.target.value))}
-                    className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-600"
+                    className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]"
                   />
-                  <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-gray-100 rounded">
+                  <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white border border-gray-200 rounded">
                     {Math.round(zoom * 100)}%
                   </span>
                 </div>
@@ -717,18 +632,17 @@ const DocumentComparison: React.FC = () => {
                 <button
                   onClick={() => setZoom((prev) => Math.min(prev + 0.25, 4))}
                   disabled={zoom >= 4}
-                  className="p-1.5 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  className="p-1 rounded border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
               </div>
-
               <button
                 onClick={handleDownloadPdf}
                 disabled={!encodedPdfData}
-                className="px-2 py-1.5 bg-cyan-600 text-white text-[10px] font-semibold rounded-md hover:bg-cyan-700 transition flex items-center gap-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-xs font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -738,13 +652,15 @@ const DocumentComparison: React.FC = () => {
             </div>
           </div>
 
-          <div ref={pdfScrollRef} className="flex-1 overflow-auto p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+          {/* PDF canvas */}
+          <div ref={pdfScrollRef} className="flex-1 overflow-auto p-4 bg-gray-50">
             <div ref={containerRef} className="relative">
               <div ref={pagesContainerRef} className="relative" />
               {renderHighlightBox()}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

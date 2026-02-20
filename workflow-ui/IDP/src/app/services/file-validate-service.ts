@@ -2,6 +2,8 @@ import { baseUrl } from '../config/configuration';
 import apiClient from './handler';
 
 export interface ValidateDataRequest {
+  submissionId: string;
+  documentId: string;
   extractedDataKey: string;
   originalFileKey: string;
 }

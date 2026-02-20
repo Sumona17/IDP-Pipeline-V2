@@ -9,6 +9,7 @@ import { AuthLayout } from "../layouts/auth-layout";
 import Dashboard from "../pages/dashboard/dashboard";
 import DocumentReview from "../pages/document-review/document-review";
 import DocumentUploaded from "../pages/document/document";
+import Stepper from "../layouts/stepper";
 
 const Login = lazy(() => import("../pages/login/login"));
 
@@ -34,10 +35,10 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: ROUTE_PATHS.DOCUMENT,
+        path: ROUTE_PATHS.SUBMISSIONDETAILS,
         element: (
           <ProtectedRoute>
-            <DocumentUploaded />
+            <Stepper />
           </ProtectedRoute>
         ),
       },

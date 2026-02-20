@@ -21,7 +21,9 @@
     "react-pdf": "^10.3.0",
     "react-router-dom": "^7.13.0",
     "react-toastify": "^11.0.5",
-    "tailwindcss": "^4.1.18"
+    "sass-embedded": "^1.97.3",
+    "tailwindcss": "^4.1.18",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
