@@ -34,8 +34,8 @@ const MyQueue: React.FC = () => {
     { key: "documentSource", label: "Document Source" },
     { key: "status", label: "Status" },
     { key: "createdAt", label: "Created At" },
-    { key: "createdBy", label: "Created By" },
     { key: "updatedAt", label: "Updated At" },
+    { key: "createdBy", label: "Created By" },
   ];
 
   useEffect(() => {
@@ -142,6 +142,9 @@ const MyQueue: React.FC = () => {
     navigate(`/submission-details/${submissionId}`);
   };
 
+  const formatSubmissionId = (id: string) => id.slice(0, 8);
+
+
   const getStatusColor = (status: string): string => {
     const normalized = normalizeStatus(status);
 
@@ -164,8 +167,6 @@ const MyQueue: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "My Queue");
     XLSX.writeFile(workbook, "my_queue.xlsx");
   };
-
-  const formatSubmissionId = (id: string) => id.slice(0, 8);
 
   return (
     <div className="w-full p-2">

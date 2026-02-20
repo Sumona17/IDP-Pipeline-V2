@@ -14,7 +14,7 @@ interface PdfViewerModalProps {
   onClose: () => void;
   fileUrl: string | null;
   fileName?: string;
-  fetchFile: (fileKey: string) => Promise<string>; // returns base64 string
+  fetchFile: (fileKey: string) => Promise<string>;
 }
 
 const PDF_BASE_WIDTH = 612;
@@ -33,7 +33,6 @@ export default function PdfViewerModal({
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  /* ── Track container width for responsive scaling ─────────────────────── */
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
@@ -45,7 +44,6 @@ export default function PdfViewerModal({
     return () => observer.disconnect();
   }, []);
 
-  /* ── Fetch PDF when modal opens ───────────────────────────────────────── */
   useEffect(() => {
     if (!visible || !fileUrl) return;
 
