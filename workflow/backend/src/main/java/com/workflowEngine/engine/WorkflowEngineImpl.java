@@ -56,7 +56,7 @@ public class WorkflowEngineImpl implements WorkflowEngine {
 
                 if ("PENDING".equals(instance.getCurrentNodeStatus())) {
 
-                    logService.logNode(instance, currentNode, "STARTED", "Node started", null, null);
+                    logService.logNode(instance, currentNode, "STARTED", "Task started", null, null);
                     instance.setCurrentNodeStatus("STARTED");
                     instance.setCurrentNodeName(currentNode.get("data").get("label").asText());
                     instance.setStatus("IN_PROGRESS");

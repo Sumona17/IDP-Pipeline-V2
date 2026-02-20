@@ -69,6 +69,11 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
         Map<String, LocalDateTime> startTimes = new HashMap<>();
         List<WorkflowExecutionLogResponse> responseList = new ArrayList<>();
 
+        WorkflowExecutionLog lastLog = logs.isEmpty() ? null : logs.get(logs.size() - 1);
+
+        boolean lastNodeIsWaiting = lastLog != null &&
+                "WAITING".equalsIgnoreCase(lastLog.getStatus());
+
         for (WorkflowExecutionLog log : logs) {
 
             if ("start".equalsIgnoreCase(log.getNodeType())) {
@@ -79,8 +84,11 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
                 continue;
             }
 
+
             if ("WAITING".equalsIgnoreCase(log.getStatus())) {
-                continue;
+                if (!lastNodeIsWaiting || !log.equals(lastLog)) {
+                    continue;
+                }
             }
 
             String nodeId = log.getNodeId();
