@@ -27,9 +27,6 @@ export const InstancesTable = ({
                 Instance ID
               </th>
               <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Workflow Name
-              </th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -56,9 +53,6 @@ export const InstancesTable = ({
                 >
                   <td className="px-6 py-2 text-sm font-medium text-gray-900">
                     {instance && instance.instanceId}
-                  </td>
-                  <td className="px-6 py-2 text-sm font-medium text-gray-500">
-                    {instance && instance.workflowName}
                   </td>
                   <td className="px-6 py-2 text-center">
                     <div className="flex flex-col items-center gap-1.5">
