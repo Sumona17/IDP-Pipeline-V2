@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+      - IMAGE_TAG="$(echo "$CODEBUILD_RESOLVED_SOURCE_VERSION" | cut -c1-7)"
+      - echo IMAGE_TAG="$IMAGE_TAG"
+  build:
+    commands:
+      - echo Building workflow-engine Docker image...
+      - docker build -f workflow/backend/Dockerfile -t "$ECR_REPO_URI:$IMAGE_TAG" -t "$ECR_REPO_URI:latest" workflow/backend
+  post_build:
+    commands:
+      - echo Pushing workflow-engine Docker image...
+      - docker push "$ECR_REPO_URI:$IMAGE_TAG"
+      - docker push "$ECR_REPO_URI:latest"
+      - printf '[{"name":"workflow-engine","imageUri":"%s"}]' "$ECR_REPO_URI:$IMAGE_TAG" > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
