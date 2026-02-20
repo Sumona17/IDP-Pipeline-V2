@@ -223,11 +223,12 @@ public class WorkflowEngineImpl implements WorkflowEngine {
                 return;
 
             case "execute_lambda":
+
                 logService.logNode(
                         instance,
                         node,
                         "WAITING",
-                        "Waiting for lambda execution",
+                        "Waiting for the next action",
                         null,
                         null
                 );
