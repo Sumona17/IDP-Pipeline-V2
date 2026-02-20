@@ -54,10 +54,7 @@ const OpenQueue: React.FC = () => {
     return sortedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [sortedData, currentPage]);
 
-  const formatSubmissionId = (id: string): string => {
-    if (id.length <= 12) return id;
-    return `${id.slice(0, 6)}...${id.slice(-4)}`;
-  };
+  const formatSubmissionId = (id: string) => id.slice(0, 8);
 
   const mapSubmission = useCallback(
     (item: ApiSubmission): QueueDocument => ({

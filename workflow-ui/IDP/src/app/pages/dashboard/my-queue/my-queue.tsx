@@ -142,9 +142,6 @@ const MyQueue: React.FC = () => {
     navigate(`/submission-details/${submissionId}`);
   };
 
-  const formatSubmissionId = (id: string) =>
-    id.length <= 12 ? id : `${id.slice(0, 6)}...${id.slice(-4)}`;
-
   const getStatusColor = (status: string): string => {
     const normalized = normalizeStatus(status);
 
@@ -167,6 +164,8 @@ const MyQueue: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "My Queue");
     XLSX.writeFile(workbook, "my_queue.xlsx");
   };
+
+  const formatSubmissionId = (id: string) => id.slice(0, 8);
 
   return (
     <div className="w-full p-2">
@@ -280,10 +279,9 @@ const MyQueue: React.FC = () => {
                     </td>
 
                     <td className="px-3 py-3">{formatDate(sub.createdAt)}</td>
-
+                    <td className="px-3 py-3">{formatDate(sub.updatedAt)}</td>
                     <td className="px-3 py-3">{sub.createdBy}</td>
 
-                    <td className="px-3 py-3">{formatDate(sub.updatedAt)}</td>
                   </tr>
                 ))
               )}
