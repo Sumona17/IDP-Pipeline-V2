@@ -8,7 +8,7 @@ const Sidebar: React.FC = () => {
   return (
     <div
       className={`h-full bg-white shadow-md p-6 transition-all duration-300 ${
-        isCollapsed ? "w-20" : "w-50"
+        isCollapsed ? "w-14" : "w-50"
       }`}
     >
       {!isCollapsed && (

@@ -1,0 +1,34 @@
+.pdf-viewer-modal {
+  .ant-modal-body {
+    padding: 16px 24px;
+  }
+}
+
+/* Loading state */
+.pdf-loading {
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* PDF container */
+.pdf-container {
+  max-height: 75vh;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+
+/* Individual page wrapper */
+.pdf-page-wrapper {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Empty state */
+.pdf-no-preview {
+  display: block;
+  text-align: center;
+  padding: 24px 0;
+  color: #999;
+}

@@ -1,0 +1,79 @@
+.uploaded-docs-container {
+  padding: 24px;
+  background: #fff;
+  border-radius: 0 12px 12px 12px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.sub-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.light-text {
+  color: #777;
+  margin-bottom: 20px;
+}
+
+.docs-table {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+
+  .ant-table {
+    background: transparent !important;
+  }
+
+  .doc-link {
+    font-weight: 500;
+    color: #4b6fff;
+  }
+
+  .action-btns {
+    display: flex;
+    gap: 10px;
+
+    .view-btn {
+      border: 1px solid #bbb;
+      border-radius: 6px;
+    }
+
+    .download-btn {
+      border-radius: 6px;
+    }
+  }
+}
+.uploaded-docs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.upload-document-btn {
+  height: 36px;
+  padding: 0 20px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.doc-actions {
+  display: flex;   
+  gap: 12px;    
+}
+
+.doc-btn {
+  height: 36px;         
+  padding: 0 20px;     
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
