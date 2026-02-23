@@ -17,7 +17,7 @@ public class SubmissionDocumentInfoResponseDto {
     private String fileSize;
     private String fileProgress;
     private String status;
-    private String createdAt;
+    private Long createdAt;
     private String extractedDataKey;
     private String originalFileKey;
 }

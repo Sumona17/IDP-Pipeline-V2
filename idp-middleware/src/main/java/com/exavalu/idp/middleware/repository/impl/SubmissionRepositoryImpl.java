@@ -182,8 +182,16 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
 
         return SubmissionSummaryResponseDto.builder()
                 .submissionId(getString(item, "submissionId"))
-                .createdAt(convertEpochToLocalDateTime(getValue(item, "createdAt")))
-                .updatedAt(convertEpochToLocalDateTime(getValue(item, "updatedAt")))
+                .createdAt(
+                        getValue(item, "createdAt") == null || getValue(item, "createdAt").isBlank()
+                                ? null
+                                : Long.parseLong(getValue(item, "createdAt"))
+                )
+                .updatedAt(
+                        getValue(item, "updatedAt") == null || getValue(item, "updatedAt").isBlank()
+                                ? null
+                                : Long.parseLong(getValue(item, "updatedAt"))
+                )
                 .documentSource("DOCUMENT_UPLOAD".equals(getString(item, "incomingPath")) ? "Document Upload" : "Email")
                 .createdBy(getString(item, "senderEmail"))
                 .status(getString(item, "status"))
@@ -206,7 +214,11 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                             .extractedDataKey(getString(m, "extractedDataS3Key"))
                             .fileSize(formatFileSize((getValue(m, "fileSize"))))
                             .fileProgress(getValue(m, "fileProgress"))
-                            .createdAt(convertEpochToLocalDateTime(getValue(m, "createdAt")))
+                            .createdAt(
+                                    getValue(m, "createdAt") == null || getValue(m, "createdAt").isBlank()
+                                            ? null
+                                            : Long.parseLong(getValue(m, "createdAt"))
+                            )
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -222,7 +234,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         AttributeValue attr = map.get(key);
 
         if (attr == null) {
-            return "";
+            return null;
         }
 
         if (attr.s() != null) {
@@ -233,7 +245,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
             return attr.n();
         }
 
-        return "";
+        return null;
     }
 
     private String convertEpochToLocalDateTime(Object epochValue) {

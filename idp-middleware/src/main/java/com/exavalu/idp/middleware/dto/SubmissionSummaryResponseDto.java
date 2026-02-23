@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
 public class SubmissionSummaryResponseDto {
 
     private String submissionId;
-    private String createdAt;
-    private String updatedAt;
+    private Long createdAt;
+    private Long updatedAt;
     private String createdBy;
     private String documentSource;
     private String status;
