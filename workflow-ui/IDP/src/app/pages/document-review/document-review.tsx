@@ -35,9 +35,6 @@ const DocumentComparison: React.FC = () => {
   const extractedDataKey = decodeURIComponent(encodedDataKey ?? '');
   const originalFileKey  = decodeURIComponent(encodedFileKey ?? '');
 
-  console.log("documentId::", documentId);
-  
-
   const [apiResponse, setApiResponse]             = useState<any>(null);
   const [encodedPdfData, setEncodedPdfData]       = useState<string>('');
   const [selectedField, setSelectedField]         = useState<TableRow | null>(null);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGlobalSort } from "../../../utils/global-sort";
+import { formatTimestamp, useGlobalSort } from "../../../utils/global-sort";
 import { fetchAllSubmissions } from "../../../services/fetch-all-submission";
 import { updateSubmissionStatus } from "../../../services/status-update";
 import { useAuth } from "react-oidc-context";
@@ -166,7 +166,7 @@ const OpenQueue: React.FC = () => {
                     <td className="px-3 py-2">{doc.createdBy}</td>
 
                     <td className="px-3 py-2">
-                      {new Date(doc.createdAt).toLocaleString()}
+                      {formatTimestamp(parseInt(doc.createdAt), true)}
                     </td>
 
                     <td className="px-3 py-2">{doc.documentSource}</td>
