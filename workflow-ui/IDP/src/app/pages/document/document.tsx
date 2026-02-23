@@ -12,6 +12,7 @@ import apiClient from "../../services/handler";
 import "../../styles/uploaded-documents.scss";
 import { documentColumns } from "../../data/static-text";
 import PdfViewerModal from "../../components/Pdf-Viewer-Modal";
+import { formatTimestamp } from "../../utils/global-sort";
 
 interface DocumentRow {
   key: string;
@@ -34,7 +35,7 @@ const mapToDocumentRow = (doc: SubmissionDocument): DocumentRow => ({
   name: doc.fileName,
   status: doc.status ?? "—",
   customer: "-",
-  createdAt: doc.createdAt,
+  createdAt:  formatTimestamp(parseInt(doc.createdAt), true),
   date: new Date().toLocaleDateString("en-US"),
   size: doc.fileSize,
   fileUrl: doc.originalFileKey,
@@ -246,7 +247,6 @@ export default function DocumentUploaded() {
         onClose={closeViewer}
         fileUrl={selectedPdfUrl}
         fileName={selectedPdfName}
-        fetchFile={fetchDocument}
       />
       <InstanceStepsModal
         isOpen={showInstanceStepsModal}

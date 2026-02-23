@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGlobalSort } from "../../../utils/global-sort";
+import { formatTimestamp, useGlobalSort } from "../../../utils/global-sort";
 import { fetchMySubmissionList } from "../../../services/submission-list";
 import * as XLSX from "xlsx";
+
 interface QueueSubmission {
   submissionId: string;
   documentSource: string;
@@ -11,6 +12,7 @@ interface QueueSubmission {
   createdBy: string;
   updatedAt: string;
 }
+
 interface ColumnConfig {
   key: keyof QueueSubmission;
   label: string;
@@ -130,20 +132,11 @@ const MyQueue: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, activeTab]);
 
-  const formatDate = useCallback((dateString: string): string => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }, []);
-
   const handleSubmissionClick = (submissionId: string) => {
     navigate(`/submission-details/${submissionId}`);
   };
 
   const formatSubmissionId = (id: string) => id.slice(0, 8);
-
 
   const getStatusColor = (status: string): string => {
     const normalized = normalizeStatus(status);
@@ -271,7 +264,7 @@ const MyQueue: React.FC = () => {
 
                     <td className="px-3 py-3">
                       <span
-                        className={`inline-flex items-center justify-center min-w-[90px] px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
+                        className={`inline-flex items-center justify-center min-w-[90px] px-3 py-1 text-xs rounded-full border ${getStatusColor(
                           sub.status,
                         )}`}
                       >
@@ -279,16 +272,47 @@ const MyQueue: React.FC = () => {
                       </span>
                     </td>
 
-                    <td className="px-3 py-3">{formatDate(sub.createdAt)}</td>
-                    <td className="px-3 py-3">{formatDate(sub.updatedAt)}</td>
+                    <td className="px-3 py-3">{formatTimestamp(parseInt(sub.createdAt), true)}</td>
+                    <td className="px-3 py-3">{formatTimestamp(parseInt(sub.updatedAt), true)}</td>
                     <td className="px-3 py-3">{sub.createdBy}</td>
-
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-3 mt-4">
+            <button
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              disabled={currentPage === 1}
+              className={`px-2 py-1 border rounded-md text-sm ${
+                currentPage === 1
+                  ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                  : "bg-[#E6DAFF] text-[#3C20F6] border-[#3C20F6]"
+              }`}
+            >
+              ← Prev
+            </button>
+
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-2 py-1 border rounded-md text-sm ${
+                currentPage === totalPages
+                  ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                  : "bg-[#E6DAFF] text-[#3C20F6] border-[#3C20F6]"
+              }`}
+            >
+              Next →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
