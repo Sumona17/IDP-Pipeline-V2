@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Upload, message } from "antd";
+import { Table, Button, Upload, message, Progress } from "antd";
 import type { UploadProps } from "antd";
 import { EyeOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
@@ -219,7 +219,56 @@ export default function DocumentUploaded() {
         ),
       };
     }
+  if (col.key === "fileProgress") {
+  return {
+    ...col,
+    render: (_: unknown, record: DocumentRow) => {
+      const progressValue = Number(record.fileProgress || 0);
 
+      const color =
+        progressValue === 100
+          ? "#52c41a"
+          : progressValue >= 70
+          ? "#1890ff"
+          : progressValue >= 30
+          ? "#faad14"
+          : "#ff4d4f";
+
+      return (
+        <div style={{ minWidth: 100 }}>
+          <div style={{ display: "flex" }}>
+            
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: color,
+                minWidth: 35,
+              }}
+            >
+              {progressValue}%
+            </span>
+
+            <Progress
+              percent={progressValue}
+              size="small"
+              showInfo={false}   
+              strokeColor={color}
+              style={{ flex: 1, marginBottom: 0 }}
+              status={
+                progressValue === 100
+                  ? "success"
+                  : progressValue > 0
+                  ? "active"
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      );
+    },
+  };
+}
     return col;
   });
   return (
@@ -241,6 +290,7 @@ export default function DocumentUploaded() {
         pagination={false}
         className="docs-table"
         rowKey="key"
+        size="small"
       />
       <PdfViewerModal
         visible={viewerVisible}

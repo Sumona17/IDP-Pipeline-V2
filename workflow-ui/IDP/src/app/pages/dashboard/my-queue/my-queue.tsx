@@ -66,7 +66,7 @@ const MyQueue: React.FC = () => {
   ).length;
 
   const inProgressCount = submissions.filter((s) =>
-    ["INREVIEW", "INPROGRESS"].includes(normalizeStatus(s.status)),
+    ["INREVIEW", "INPROGRESS","REVIEWINPROGRESS"].includes(normalizeStatus(s.status)),
   ).length;
 
   const completedCount = submissions.filter((s) =>
@@ -93,7 +93,7 @@ const MyQueue: React.FC = () => {
         );
       case "inprogress":
         return submissions.filter((s) =>
-          ["INREVIEW", "INPROGRESS"].includes(normalizeStatus(s.status)),
+          ["INREVIEW", "INPROGRESS","REVIEWINPROGRESS"].includes(normalizeStatus(s.status)),
         );
       case "completed":
         return submissions.filter((s) =>
