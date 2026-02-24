@@ -1,9 +1,9 @@
-import axiosCore from 'axios';
 import apiClient from './handler';
 
 export interface PresignedUrlRequest {
   fileName: string;
   contentType: string;
+  submissionId?: string;
 }
 
 export interface PresignedUrlResponse {
@@ -22,20 +22,30 @@ export interface UploadFileOptions {
 }
 
 export interface BatchUploadCallbacks {
+  submissionId?: string;
   onFileProgress?: (fileName: string, percent: number) => void;
   onFileSuccess?: (fileName: string, meta: PresignedUrlResponse) => void;
   onFileError?: (fileName: string, error: unknown) => void;
 }
 
-export const getPresignedUrls = async (files: File[]): Promise<PresignedUrlResponse[]> => {
+export const getPresignedUrls = async (
+  files: File[],
+  submissionId?: string
+): Promise<PresignedUrlResponse[]> => {
   const payload: PresignedUrlRequest[] = files.map((file) => ({
     fileName: file.name,
     contentType: file.type,
+    ...(submissionId && { submissionId }),
   }));
   return await apiClient.post<PresignedUrlResponse[]>('generate-presigned-url', payload);
 };
 
-export const uploadFileToS3 = async ({ file, uploadUrl, abortSignal, onProgress }: UploadFileOptions): Promise<void> => {
+export const uploadFileToS3 = async ({
+  file,
+  uploadUrl,
+  abortSignal,
+  onProgress,
+}: UploadFileOptions): Promise<void> => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
@@ -74,7 +84,7 @@ export const batchUploadFiles = async (
   abortControllers: Record<string, AbortController>,
   callbacks: BatchUploadCallbacks = {}
 ): Promise<{ submissionId: string }> => {
-  const presignedList = await getPresignedUrls(files);
+  const presignedList = await getPresignedUrls(files, callbacks.submissionId);
   const submissionId = presignedList[0]?.submissionId ?? '';
 
   const presignedMap: Record<string, PresignedUrlResponse> = {};
@@ -105,9 +115,7 @@ export const batchUploadFiles = async (
           });
           callbacks.onFileSuccess?.(file.name, presigned);
         } catch (error: unknown) {
-          if ((error as any)?.name === 'CanceledError') {
-            console.log(`${file.name} cancelled`);
-          } else {
+          if ((error as any)?.name !== 'CanceledError') {
             callbacks.onFileError?.(file.name, error);
           }
         }

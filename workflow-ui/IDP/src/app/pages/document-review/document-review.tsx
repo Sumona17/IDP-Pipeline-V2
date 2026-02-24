@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { getValidateData } from '../../services/file-validate-service';
+import { getValidateData, updateExtractedData } from '../../services/file-validate-service';
 import editIcon from '../../../../public/assets/icons/penicon.png';
-import arrowIcon from '../../../../public/assets/icons/arrowicon.png'
+import arrowIcon from '../../../../public/assets/icons/arrowicon.png';
 
 interface BoundingBox {
   Left: number;
@@ -31,50 +31,130 @@ interface RowEdit {
   overrideValue: string;
 }
 
+interface EditedEntry {
+  originalValue: string;
+  newValue: string;
+}
+
+interface DiffEntry {
+  key: string;
+  section: string;
+  field: string;
+  fieldPath?: string;
+  originalValue: string;
+  newValue: string;
+  confidence: number | null;
+  page: number;
+}
+
+type ToastType = 'success' | 'error';
+
+interface Toast {
+  id: number;
+  type: ToastType;
+  message: string;
+}
+
+const ToastContainer: React.FC<{ toasts: Toast[]; onRemove: (id: number) => void }> = ({ toasts, onRemove }) => (
+  <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    {toasts.map((toast) => (
+      <div
+        key={toast.id}
+        className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium min-w-[280px] max-w-sm animate-slide-in transition-all
+          ${toast.type === 'success'
+            ? 'bg-white border-emerald-200 text-emerald-800'
+            : 'bg-white border-red-200 text-red-800'
+          }`}
+      >
+        {toast.type === 'success' ? (
+          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center">
+            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        ) : (
+          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-100 flex items-center justify-center">
+            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+        )}
+        <span className="flex-1">{toast.message}</span>
+        <button
+          onClick={() => onRemove(toast.id)}
+          className={`flex-shrink-0 hover:opacity-60 transition-opacity ${toast.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    ))}
+  </div>
+);
+
 const DocumentComparison: React.FC = () => {
-  const { submissionId, documentId, extractedDataKey: encodedDataKey, originalFileKey: encodedFileKey } = useParams<{ submissionId: string; documentId: string; extractedDataKey: string; originalFileKey: string }>();
+  const {
+    submissionId,
+    documentId,
+    extractedDataKey: encodedDataKey,
+    originalFileKey: encodedFileKey,
+  } = useParams<{
+    submissionId: string;
+    documentId: string;
+    extractedDataKey: string;
+    originalFileKey: string;
+  }>();
 
   const extractedDataKey = decodeURIComponent(encodedDataKey ?? '');
-  const originalFileKey = decodeURIComponent(encodedFileKey ?? '');
+  const originalFileKey  = decodeURIComponent(encodedFileKey  ?? '');
 
-  console.log("documentId::", documentId);
-
-
-  const [apiResponse, setApiResponse] = useState<any>(null);
-  const [encodedPdfData, setEncodedPdfData] = useState<string>('');
-  const [selectedField, setSelectedField] = useState<TableRow | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(0);
-  const [zoom, setZoom] = useState<number>(1);
-  const [baseScale, setBaseScale] = useState<number>(1);
-  const [searchText, setSearchText] = useState('');
+  const [apiResponse, setApiResponse]           = useState<any>(null);
+  const [encodedPdfData, setEncodedPdfData]     = useState<string>('');
+  const [selectedField, setSelectedField]       = useState<TableRow | null>(null);
+  const [currentPage, setCurrentPage]           = useState<number>(1);
+  const [totalPages, setTotalPages]             = useState<number>(0);
+  const [zoom, setZoom]                         = useState<number>(1);
+  const [baseScale, setBaseScale]               = useState<number>(1);
   const [confidenceFilter, setConfidenceFilter] = useState('all');
-  const [rowEdits, setRowEdits] = useState<Record<string, RowEdit>>({});
-  const [renderedPages, setRenderedPages] = useState<Record<number, any>>({});
-  const [naturalPageSize, setNaturalPageSize] = useState({ width: 0, height: 0 });
-  const [highlightBox, setHighlightBox] = useState<any>(null);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  const [pdfError, setPdfError] = useState<string>('');
-  const [dataError, setDataError] = useState<string>('');
-  const [editingField, setEditingField] = useState<any>(null);
-  const [editedValues, setEditedValues] = useState<any>({});
-  const [pageFilter, setPageFilter] = useState<string>('all');
+  const [rowEdits, setRowEdits]                 = useState<Record<string, RowEdit>>({});
+  const [renderedPages, setRenderedPages]       = useState<Record<number, any>>({});
+  const [naturalPageSize, setNaturalPageSize]   = useState({ width: 0, height: 0 });
+  const [highlightBox, setHighlightBox]         = useState<any>(null);
+  const [isPdfLoading, setIsPdfLoading]         = useState(false);
+  const [isDataLoading, setIsDataLoading]       = useState(true);
+  const [pdfError, setPdfError]                 = useState<string>('');
+  const [dataError, setDataError]               = useState<string>('');
+  const [editingField, setEditingField]         = useState<any>(null);
+  const [pageFilter, setPageFilter]             = useState<string>('all');
+  const [isSubmitting, setIsSubmitting]         = useState(false);
+  const [editedValues, setEditedValues]         = useState<Record<string, EditedEntry>>({});
+  const [toasts, setToasts]                     = useState<Toast[]>([]);
+  const toastIdRef                              = useRef(0);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pdfScrollRef = useRef<HTMLDivElement>(null);
-  const pdfDocRef = useRef<any>(null);
+  const containerRef      = useRef<HTMLDivElement>(null);
+  const pdfScrollRef      = useRef<HTMLDivElement>(null);
+  const pdfDocRef         = useRef<any>(null);
   const pagesContainerRef = useRef<HTMLDivElement>(null);
-  const renderTasksRef = useRef<Record<number, any>>({});
-  const pdfjsRef = useRef<any>(null);
+  const renderTasksRef    = useRef<Record<number, any>>({});
+  const pdfjsRef          = useRef<any>(null);
 
-  const DPI_SCALE = 2;
+  const DPI_SCALE            = 2;
   const CONFIDENCE_THRESHOLD = 70;
+  const TOAST_DURATION_MS    = 4000;
 
-  const formatConfidenceScore = (score: number | null): string => {
-    if (score === null || score === undefined) return '-';
-    return Math.round(score).toString();
-  };
+  const showToast = useCallback((type: ToastType, message: string) => {
+    const id = ++toastIdRef.current;
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), TOAST_DURATION_MS);
+  }, []);
+
+  const removeToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const formatConfidenceScore = (score: number | null): string =>
+    score === null || score === undefined ? '-' : Math.round(score).toString();
 
   const getConfidenceColor = (confidence: number | null): string => {
     if (confidence === null) return 'text-gray-600';
@@ -92,20 +172,15 @@ const DocumentComparison: React.FC = () => {
 
   const getHighlightColor = (confidenceScore: number | null): string => {
     const score = Number(confidenceScore);
-    if (!score || score < CONFIDENCE_THRESHOLD) return '#EF4444';
-    return '#3C20F6';
+    return !score || score < CONFIDENCE_THRESHOLD ? '#EF4444' : '#3C20F6';
   };
 
-  const formatLabel = (key: string): string => {
-    return key
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (str) => str.toUpperCase())
-      .trim();
-  };
+  const formatLabel = (key: string): string =>
+    key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim();
 
   const flattenData = (data: any): TableRow[] => {
     const rows: TableRow[] = [];
-    const sections = data?.extractedData?.sections ?? data?.sections ?? {};
+    const sections = data?.extractedData?.data?.sections ?? data?.sections ?? {};
 
     const processSection = (sectionName: string, sectionData: any, page: number) => {
       if (Array.isArray(sectionData)) {
@@ -168,12 +243,74 @@ const DocumentComparison: React.FC = () => {
     return rows;
   };
 
+  const computeDiff = useCallback((): DiffEntry[] => {
+    if (!apiResponse) return [];
+    return flattenData(apiResponse)
+      .filter(
+        (row) =>
+          !row.isSection &&
+          editedValues[row.key] &&
+          editedValues[row.key].newValue !== editedValues[row.key].originalValue
+      )
+      .map((row) => ({
+        key:           row.key,
+        section:       row.section ?? '',
+        field:         row.field,
+        fieldPath:     row.fieldPath,
+        originalValue: editedValues[row.key].originalValue,
+        newValue:      editedValues[row.key].newValue,
+        confidence:    row.confidence,
+        page:          row.page,
+      }));
+  }, [apiResponse, editedValues]);
+
+  const buildUpdatedData = useCallback((): any => {
+    if (!apiResponse) return {};
+    const diff = computeDiff();
+    if (diff.length === 0) return apiResponse?.extractedData?.data ?? apiResponse;
+
+    const updated  = JSON.parse(JSON.stringify(apiResponse?.extractedData?.data ?? apiResponse));
+    const sections = updated?.sections ?? updated?.extractedData?.data?.sections ?? {};
+
+    diff.forEach(({ section, fieldPath, newValue }) => {
+      if (!section || !fieldPath || !sections[section]) return;
+      const sd = sections[section];
+      if (Array.isArray(sd)) {
+        sd.forEach((item: any) => {
+          if (item[fieldPath]?.value !== undefined) item[fieldPath].value = newValue;
+        });
+      } else if (sd?.[fieldPath]?.value !== undefined) {
+        sd[fieldPath].value = newValue;
+      }
+    });
+
+    return updated;
+  }, [apiResponse, computeDiff]);
+
+  const handleSubmit = useCallback(async () => {
+    const diff        = computeDiff();
+    const updatedData = buildUpdatedData();
+
+    setIsSubmitting(true);
+    try {
+      await updateExtractedData({
+        submissionId:      submissionId!,
+        documentId:        documentId!,
+        extractedDataJson: updatedData,
+        diffJson:          diff,
+      });
+      showToast('success', 'Document submitted successfully.');
+    } catch (error) {
+      showToast('error', error instanceof Error ? error.message : 'Submission failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [computeDiff, buildUpdatedData, submissionId, documentId, showToast]);
+
   const base64ToUint8Array = (base64: string): Uint8Array => {
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
     return bytes;
   };
 
@@ -202,20 +339,18 @@ const DocumentComparison: React.FC = () => {
       try {
         const pdfjs = await import('pdfjs-dist');
         pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
-        pdfjsRef.current = pdfjs;
-        const pdfBytes = base64ToUint8Array(encodedPdfData);
+        pdfjsRef.current  = pdfjs;
+        const pdfBytes    = base64ToUint8Array(encodedPdfData);
         const loadingTask = pdfjs.getDocument({ data: pdfBytes, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true });
-        const pdf = await loadingTask.promise;
+        const pdf         = await loadingTask.promise;
         pdfDocRef.current = pdf;
         setTotalPages(pdf.numPages);
         const page = await pdf.getPage(1);
-        const naturalWidth = page.view[2];
-        const naturalHeight = page.view[3];
-        setNaturalPageSize({ width: naturalWidth, height: naturalHeight });
+        setNaturalPageSize({ width: page.view[2], height: page.view[3] });
         const container = containerRef.current;
         if (container) {
           const { width: clientWidth } = container.getBoundingClientRect();
-          setBaseScale((clientWidth - 40) / naturalWidth);
+          setBaseScale((clientWidth - 40) / page.view[2]);
         }
       } catch (error: any) {
         setPdfError(error.name === 'InvalidPDFException' ? 'Invalid PDF file' : error.message || 'Unknown error loading PDF');
@@ -231,46 +366,44 @@ const DocumentComparison: React.FC = () => {
     Object.values(renderTasksRef.current).forEach((task: any) => { if (task?.cancel) task.cancel(); });
     renderTasksRef.current = {};
     try {
-      const currentScale = baseScale * zoom;
+      const currentScale     = baseScale * zoom;
       const newRenderedPages: Record<number, any> = {};
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page = await pdfDocRef.current.getPage(pageNum);
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d', { alpha: false });
+        const page     = await pdfDocRef.current.getPage(pageNum);
+        const canvas   = document.createElement('canvas');
+        const context  = canvas.getContext('2d', { alpha: false });
         const viewport = page.getViewport({ scale: currentScale * DPI_SCALE });
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        canvas.height  = viewport.height;
+        canvas.width   = viewport.width;
         context!.fillStyle = 'white';
         context!.fillRect(0, 0, canvas.width, canvas.height);
-        const displayWidth = viewport.width / DPI_SCALE;
+        const displayWidth  = viewport.width  / DPI_SCALE;
         const displayHeight = viewport.height / DPI_SCALE;
-        canvas.style.width = `${displayWidth}px`;
-        canvas.style.height = `${displayHeight}px`;
-        canvas.style.display = 'block';
-        canvas.style.marginBottom = '16px';
-        canvas.style.border = '1px solid #E5E7EB';
-        canvas.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
-        canvas.style.backgroundColor = 'white';
-        canvas.style.borderRadius = '8px';
+        Object.assign(canvas.style, {
+          width: `${displayWidth}px`, height: `${displayHeight}px`,
+          display: 'block', marginBottom: '16px',
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+          backgroundColor: 'white', borderRadius: '8px',
+        });
         const renderTask = page.render({ canvasContext: context!, viewport });
         renderTasksRef.current[pageNum] = renderTask;
         try {
           await renderTask.promise;
           newRenderedPages[pageNum] = { canvas, viewport, pageHeight: displayHeight, pageWidth: displayWidth, displayScale: currentScale };
         } catch (err: any) {
-          if (err.name !== 'RenderingCancelledException') console.error('Rendering error:', err);
+          if (err.name !== 'RenderingCancelledException') throw err;
         }
       }
       setRenderedPages(newRenderedPages);
-    } catch (error) {
-      console.error('Error rendering PDF:', error);
+    } catch {
     }
   };
 
   useEffect(() => {
     if (baseScale && pdfDocRef.current && totalPages > 0) {
-      const timeoutId = setTimeout(() => renderAllPDFPages(), 100);
-      return () => clearTimeout(timeoutId);
+      const id = setTimeout(() => renderAllPDFPages(), 100);
+      return () => clearTimeout(id);
     }
   }, [zoom, baseScale, totalPages]);
 
@@ -298,43 +431,43 @@ const DocumentComparison: React.FC = () => {
 
   const scrollToHighlight = (bbox: BoundingBox, targetPage: number) => {
     if (!pdfScrollRef.current || !renderedPages[targetPage]) return;
-    const currentScale = baseScale * zoom;
-    let cumulativeHeight = 0;
+    const currentScale       = baseScale * zoom;
+    let cumulativeHeight     = 0;
     for (let i = 1; i < targetPage; i++) {
       const prev = renderedPages[i];
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
-    const canvasHeight = naturalPageSize.height * currentScale;
-    const top = bbox.Top * canvasHeight;
-    const boxHeight = bbox.Height * canvasHeight;
-    const absoluteHighlightY = cumulativeHeight + top + boxHeight / 2;
-    const containerHeight = pdfScrollRef.current.getBoundingClientRect().height;
+    const canvasHeight       = naturalPageSize.height * currentScale;
+    const absoluteHighlightY = cumulativeHeight + bbox.Top * canvasHeight + (bbox.Height * canvasHeight) / 2;
+    const containerHeight    = pdfScrollRef.current.getBoundingClientRect().height;
     pdfScrollRef.current.scrollTo({ top: Math.max(0, absoluteHighlightY - containerHeight / 2), behavior: 'smooth' });
   };
 
   const renderHighlightBox = () => {
     if (!highlightBox || Object.keys(renderedPages).length === 0 || !highlightBox.page) return null;
-    const targetPage = highlightBox.page;
-    const pageData = renderedPages[targetPage];
+    const pageData = renderedPages[highlightBox.page];
     if (!pageData) return null;
     let cumulativeHeight = 0;
-    for (let i = 1; i < targetPage; i++) {
+    for (let i = 1; i < highlightBox.page; i++) {
       const prev = renderedPages[i];
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
     const currentScale = baseScale * zoom;
-    const canvasWidth = naturalPageSize.width * currentScale;
+    const canvasWidth  = naturalPageSize.width  * currentScale;
     const canvasHeight = naturalPageSize.height * currentScale;
-    const left = highlightBox.Left * canvasWidth;
-    const top = highlightBox.Top * canvasHeight;
-    const boxWidth = highlightBox.Width * canvasWidth;
-    const boxHeight = highlightBox.Height * canvasHeight;
-    const absoluteTop = cumulativeHeight + top;
-    const borderColor = highlightBox.confidenceScore;
+    const borderColor  = highlightBox.confidenceScore;
     return (
       <div
         className="absolute pointer-events-none border-[3px] transition-all rounded"
-        style={{ left: `${left - 4}px`, top: `${absoluteTop - 4}px`, width: `${boxWidth + 8}px`, height: `${boxHeight + 8}px`, borderColor, backgroundColor: `${borderColor}20`, zIndex: 30 }}
+        style={{
+          left:            `${highlightBox.Left   * canvasWidth  - 4}px`,
+          top:             `${cumulativeHeight + highlightBox.Top * canvasHeight - 4}px`,
+          width:           `${highlightBox.Width  * canvasWidth  + 8}px`,
+          height:          `${highlightBox.Height * canvasHeight + 8}px`,
+          borderColor,
+          backgroundColor: `${borderColor}20`,
+          zIndex:          30,
+        }}
       >
         {selectedField && (
           <div className="absolute -top-9 left-0 bg-[#3C20F6] text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap">
@@ -350,32 +483,22 @@ const DocumentComparison: React.FC = () => {
     );
   };
 
-  const handleReviewChange = (checked: boolean, record: TableRow) => {
-    setRowEdits((prev) => ({
+  const handleEditChange = (recordKey: string, originalValue: string, newValue: string) => {
+    setEditedValues((prev) => ({
       ...prev,
-      [record.key]: { review: checked, overrideValue: prev[record.key]?.overrideValue || record.value || '' },
+      [recordKey]: {
+        originalValue: prev[recordKey]?.originalValue ?? originalValue,
+        newValue,
+      },
     }));
-  };
-
-  const handleOverrideChange = (value: string, record: TableRow) => {
-    setRowEdits((prev) => ({ ...prev, [record.key]: { review: true, overrideValue: value } }));
-  };
-
-  const handleExportData = () => {
-    const blob = new Blob([JSON.stringify(apiResponse?.extractedData ?? apiResponse, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url; link.download = 'extracted-data.json'; link.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleDownloadPdf = () => {
     if (!encodedPdfData) return;
     const bytes = base64ToUint8Array(encodedPdfData);
-    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url; link.download = 'document.pdf'; link.click();
+    const blob  = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+    const url   = URL.createObjectURL(blob);
+    Object.assign(document.createElement('a'), { href: url, download: 'document.pdf' }).click();
     URL.revokeObjectURL(url);
   };
 
@@ -384,40 +507,28 @@ const DocumentComparison: React.FC = () => {
   const getFilteredRows = (): TableRow[] => {
     const allRows = buildTableRows();
     return allRows.filter((row) => {
-      const searchLower = searchText.toLowerCase();
-      const matchesSearch = !searchText || row.field.toLowerCase().includes(searchLower) || row.value.toLowerCase().includes(searchLower);
-      if (row.isSection) return matchesSearch;
+      if (row.isSection) return true;
       const score = row.confidence;
-      let matchesConfidence = true;
+      let mc = true;
       if (confidenceFilter !== 'all' && score !== null) {
         switch (confidenceFilter) {
-          case 'below_50': matchesConfidence = score < 50; break;
-          case '50_75': matchesConfidence = score >= 50 && score < 75; break;
-          case '75_80': matchesConfidence = score >= 75 && score < 80; break;
-          case '80_85': matchesConfidence = score >= 80 && score < 85; break;
-          case '85_90': matchesConfidence = score >= 85 && score < 90; break;
-          case '90_above': matchesConfidence = score >= 90; break;
+          case 'below_50': mc = score < 50; break;
+          case '50_75':    mc = score >= 50 && score < 75; break;
+          case '75_80':    mc = score >= 75 && score < 80; break;
+          case '80_85':    mc = score >= 80 && score < 85; break;
+          case '85_90':    mc = score >= 85 && score < 90; break;
+          case '90_above': mc = score >= 90; break;
         }
       }
-      let matchesPage = true;
-      if (pageFilter !== 'all') {
-        matchesPage = row.page === Number(pageFilter);
-      }
-      return matchesSearch && matchesConfidence && matchesPage;
+      const mp = pageFilter === 'all' ? true : row.page === Number(pageFilter);
+      return mc && mp;
     });
   };
-  const allRows = buildTableRows();
 
-  const uniquePages = Array.from(
-    new Set(
-      allRows
-        .filter(row => !row.isSection && row.page !== undefined)
-        .map(row => row.page)
-    )
-  ).sort((a, b) => a - b);
-
+  const allRows      = buildTableRows();
+  const uniquePages  = Array.from(new Set(allRows.filter(r => !r.isSection && r.page !== undefined).map(r => r.page))).sort((a, b) => a - b);
   const filteredRows = getFilteredRows();
-  console.log('Filtered Rows:', filteredRows);
+  const changedCount = Object.values(editedValues).filter(e => e.newValue !== e.originalValue).length;
 
   if (isPdfLoading || isDataLoading) {
     return (
@@ -431,348 +542,281 @@ const DocumentComparison: React.FC = () => {
     );
   }
 
+  console.log("apiResponse?.extractedData::", apiResponse?.extractedData);
+  
+
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="px-0 py-4 flex gap-6">
+  
+      {/* Submission ID */}
+      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[180px]">
+        <p className="text-xs text-gray-500 mb-1">Submission ID</p>
+        <p className="text-sm font-medium text-gray-900">{apiResponse?.extractedData?.headerInfo?.submissionId}</p>
+      </div>
+  
+      {/* Form Name */}
+      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[220px]">
+        <p className="text-xs text-gray-500 mb-1">Form Name</p>
+        <p className="text-sm font-medium text-gray-900">
+          {apiResponse?.extractedData?.headerInfo?.documentName}
+        </p>
+      </div>
+  
+      {/* Broker Name */}
+      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[200px]">
+        <p className="text-xs text-gray-500 mb-1">Broker Name</p>
+        <p className="text-sm font-medium text-gray-900">
+        {apiResponse?.extractedData?.headerInfo?.brokerName}
+        </p>
+      </div>
+  
+      {/* Customer Name */}
+      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[200px]">
+        <p className="text-xs text-gray-500 mb-1">Customer Name</p>
+        <p className="text-sm font-medium text-gray-900">
+          {apiResponse?.extractedData?.headerInfo?.customerName}
+        </p>
+      </div>
+  
+    </div>
 
-      {/* ── Top bar ────────────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
-        <div className="px-6 py-4 flex items-center justify-between">
-          {/* Left: icon + title */}
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#E6DAFF] rounded-xl">
-              <svg className="w-5 h-5 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-[18px] font-semibold text-gray-900">Document Review</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {apiResponse?.extractedData?.documentType ?? 'Review and validate extracted document data'}
-              </p>
-            </div>
-          </div>
-
-          {/* Center: errors */}
-          <div className="flex flex-col gap-1">
-            {dataError && (
-              <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ Data: {dataError}</p>
-            )}
-            {pdfError && (
-              <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ PDF: {pdfError}</p>
-            )}
-          </div>
-
-          {/* Right: export */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleExportData}
-              className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors flex items-center"
-            >
-              <svg
-                className="w-4 h-4 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12"
-                />
-              </svg>
-              Export Data
-            </button>
-
-            <button
-              className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors"
-            >
-              Save
-            </button>
-
-            <button
-              className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors"
-            >
-              Submit
-            </button>
-          </div>
-        </div>
+      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+         <div className=" border-b border-gray-200 shadow-sm">
       </div>
 
-      {/* ── Main panels ────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden gap-4 p-4">
+        <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+          <div className="px-6 py-4 flex items-center justify-between">
 
-
-
-        {/* ── left: PDF viewer ────────────────────────────── */}
-        <div className="w-[65%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-
-          {/* PDF toolbar */}
-          <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-sm font-semibold text-[#4318FF]  flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  Document
-                </h2>
-                <p className="text-xs text-gray-400 mt-0.5">Total Pages: <span className="text-xs text-gray-600">{totalPages}</span></p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-[#E6DAFF] rounded-xl">
+                <svg className="w-5 h-5 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-
-              {/* Zoom controls */}
-              <div className="flex items-center gap-2 px-3 py-2    text-xs">
-                <div className="flex items-center gap-1 font-semibold ">
-                  <span className="px-2 py-0.5  text-[#3C20F6] rounded-full text-xs font-medium">
-                    {String(currentPage).padStart(2, '0')}
-                  </span>
-                  <span className="text-gray-400">/</span>
-                  <span className="text-gray-600">{String(totalPages).padStart(2, '0')}</span>
-                </div>
-
-                <div className="flex-1 flex items-center gap-2">
-                  <button
-                    onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
-                    disabled={zoom <= 0.25}
-                    className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                    </svg>
-                  </button>
-
-                  <div className="flex-1 flex items-center gap-1.5">
-                    <input
-                      type="range" min="0.25" max="4" step="0.25" value={zoom}
-                      onChange={(e) => setZoom(Number(e.target.value))}
-                      className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]"
-                    />
-                    <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white ">
-                      {Math.round(zoom * 100)}%
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => setZoom((prev) => Math.min(prev + 0.25, 4))}
-                    disabled={zoom >= 4}
-                    className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                </div>
-                <button
-                  onClick={handleDownloadPdf}
-                  disabled={!encodedPdfData}
-                  className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-xs font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download
-                </button>
+              <div>
+                <h1 className="text-[18px] font-semibold text-gray-900">Document Review</h1>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {apiResponse?.extractedData?.data?.documentType ?? 'Review and validate extracted document data'}
+                </p>
               </div>
             </div>
 
+            <div className="flex flex-col gap-1">
+              {dataError && <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ Data: {dataError}</p>}
+              {pdfError  && <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ PDF: {pdfError}</p>}
+            </div>
 
-          </div>
-
-          {/* PDF canvas */}
-          <div ref={pdfScrollRef} className="flex-1 overflow-auto p-4 bg-gray-50">
-            <div ref={containerRef} className="relative">
-              <div ref={pagesContainerRef} className="relative" />
-              {renderHighlightBox()}
+            <div className="flex items-center gap-3">
+              <button className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors" 
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                Save
+              </button>
+              <button
+                className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                Submit
+                {/* {changedCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-[#3C20F6] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {changedCount}
+                  </span>
+                )} */}
+              </button>
             </div>
           </div>
         </div>
-        {/* ── right: data table ─────────────────────────────── */}
-        <div className="w-[35%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
 
-          {/* Filters */}
-          <h2 className="px-4 py-3  text-sm font-semibold text-[#4318FF] flex items-center gap-15">
+        <div className="flex flex-1 overflow-hidden gap-4 p-4">
 
-            Mapped Data
-          </h2>
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-            <div className="relative flex-shrink-0">
-              <select
-                value={confidenceFilter}
-                onChange={(e) => setConfidenceFilter(e.target.value)}
-                className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent bg-white appearance-none cursor-pointer outline-none"
-              >
-                <option value="all">All Confidence %</option>
-                <option value="below_50">Below 50%</option>
-                <option value="50_75">50% – 75%</option>
-                <option value="75_80">75% – 80%</option>
-                <option value="80_85">80% – 85%</option>
-                <option value="85_90">85% – 90%</option>
-                <option value="90_above">90% & Above</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+          <div className="w-[65%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+            <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#4318FF] flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Document
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Total Pages: <span className="text-xs text-gray-600">{totalPages}</span></p>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 text-xs">
+                  <div className="flex items-center gap-1 font-semibold">
+                    <span className="px-2 py-0.5 text-[#3C20F6] rounded-full text-xs font-medium">
+                      {String(currentPage).padStart(2, '0')}
+                    </span>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-gray-600">{String(totalPages).padStart(2, '0')}</span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-2">
+                    <button onClick={() => setZoom(p => Math.max(p - 0.25, 0.25))} disabled={zoom <= 0.25}
+                      className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                    </button>
+                    <div className="flex-1 flex items-center gap-1.5">
+                      <input type="range" min="0.25" max="4" step="0.25" value={zoom}
+                        onChange={e => setZoom(Number(e.target.value))}
+                        className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]" />
+                      <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white">
+                        {Math.round(zoom * 100)}%
+                      </span>
+                    </div>
+                    <button onClick={() => setZoom(p => Math.min(p + 0.25, 4))} disabled={zoom >= 4}
+                      className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                  </div>
+                  <button onClick={handleDownloadPdf} disabled={!encodedPdfData}
+                    className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-xs font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="relative flex-shrink-0 ml-2">
-              <select
-                value={pageFilter}
-                onChange={(e) => setPageFilter(e.target.value)}
-                className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg 
-               focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent 
-               bg-white appearance-none cursor-pointer outline-none"
-              >
-                <option value="all">All Pages</option>
-                {uniquePages.map((page) => (
-                  <option key={page} value={page}>
-                    Page {page}
-                  </option>
-                ))}
-              </select>
 
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+            <div ref={pdfScrollRef} className="flex-1 overflow-auto p-4 bg-gray-50">
+              <div ref={containerRef} className="relative">
+                <div ref={pagesContainerRef} className="relative" />
+                {renderHighlightBox()}
               </div>
             </div>
-            {/* <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search extracted data..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent outline-none"
-              />
-            </div> */}
           </div>
 
-          {/* Table */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
-            <table className="w-full border-collapse text-sm">
-              {/* <thead className="bg-[#E6DAFF] sticky top-0 z-10">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[20%]">Document Provision</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[20%]">Extracted Value</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[10%]">Confidence</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[8%]">Review</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[22%]">Override Value</th>
-                </tr>
-              </thead> */}
+          <div className="w-[35%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+            <h2 className="px-4 py-3 text-sm font-semibold text-[#4318FF]">Mapped Data</h2>
 
-              <tbody className="bg-white divide-y divide-gray-50">
-                {filteredRows.map((record) => {
-                  if (record.isSection) {
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+              <div className="relative flex-shrink-0">
+                <select value={confidenceFilter} onChange={e => setConfidenceFilter(e.target.value)}
+                  className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] bg-white appearance-none cursor-pointer outline-none">
+                  <option value="all">All Confidence %</option>
+                  <option value="below_50">Below 50%</option>
+                  <option value="50_75">50% – 75%</option>
+                  <option value="75_80">75% – 80%</option>
+                  <option value="80_85">80% – 85%</option>
+                  <option value="85_90">85% – 90%</option>
+                  <option value="90_above">90% & Above</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              <div className="relative flex-shrink-0 ml-2">
+                <select value={pageFilter} onChange={e => setPageFilter(e.target.value)}
+                  className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] bg-white appearance-none cursor-pointer outline-none">
+                  <option value="all">All Pages</option>
+                  {uniquePages.map(page => <option key={page} value={page}>Page {page}</option>)}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <table className="w-full border-collapse text-sm">
+                <tbody className="bg-white divide-y divide-gray-50">
+                  {filteredRows.map((record) => {
+                    if (record.isSection) {
+                      return (
+                        <tr key={record.key} className="bg-gray-50">
+                          <td colSpan={5} className="px-4 py-2.5 font-semibold text-[#3C20F6] text-xs border-l-4 border-[#3C20F6]">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              {record.field}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    const currentDisplayValue = editedValues[record.key]?.newValue ?? record.value;
+                    const hasChanged =
+                      editedValues[record.key] &&
+                      editedValues[record.key].newValue !== editedValues[record.key].originalValue;
+
                     return (
-                      <tr key={record.key} className="bg-gray-50">
-                        <td colSpan={5} className="px-4 py-2.5 font-semibold text-[#3C20F6] text-xs border-l-4 border-[#3C20F6]">
-                          <div className="flex items-center gap-2">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            {record.field}
+                      <tr
+                        key={record.key}
+                        onClick={() => handleRowClick(record)}
+                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
+                          selectedField?.key === record.key
+                            ? 'bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]'
+                            : 'hover:bg-gray-50 border-l-4 border-l-transparent'
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-medium text-gray-900">{record.field}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
+                              record.confidence !== null && record.confidence >= 95   ? 'bg-emerald-100' :
+                              record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
+                              record.confidence !== null                              ? 'bg-red-100' : 'bg-gray-100'
+                            }`}>
+                              {record.confidencePercent !== '-' ? `${record.confidencePercent}%` : '-'}
+                            </span>
+                          </div>
+                          <div className="flex items-center border border-gray-200 rounded-lg px-2 py-1.5 bg-[#F6F6F6]">
+                            {editingField === record.key ? (
+                              <input
+                                type="text"
+                                autoFocus
+                                value={currentDisplayValue}
+                                onChange={e => handleEditChange(record.key, record.value, e.target.value)}
+                                onBlur={() => setEditingField(null)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-full text-xs outline-none bg-transparent"
+                              />
+                            ) : (
+                              <div className="flex-1 text-xs text-gray-700">
+                                {hasChanged ? (
+                                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                                    <span className="line-through text-gray-500 text-left bg-[#F9B53642] truncate px-1 rounded">
+                                      {editedValues[record.key].originalValue}
+                                    </span>
+                                    <div className="flex justify-center">
+                                      <img src={arrowIcon} alt="→" className="w-5 h-5 object-contain" />
+                                    </div>
+                                    <span className="text-gray-800 text-right font-medium truncate">
+                                      {editedValues[record.key].newValue}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span>{record.value}</span>
+                                )}
+                              </div>
+                            )}
+                            <button
+                              onClick={e => { e.stopPropagation(); setEditingField(record.key); }}
+                              className="ml-2 flex-shrink-0"
+                            >
+                              <img src={editIcon} alt="edit" className="w-3 h-3 cursor-pointer" />
+                            </button>
                           </div>
                         </td>
                       </tr>
                     );
-                  }
-
-                  const editState = rowEdits[record.key];
-                  const isReviewed = editState?.review || false;
-                  const overrideValue = editState?.overrideValue || record.value;
-
-
-                  return (
-                    <tr
-                      key={record.key}
-                      onClick={() => handleRowClick(record)}
-                      className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
-                        selectedField?.key === record.key
-                          ? 'bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]'
-                          : 'hover:bg-gray-50 border-l-4 border-l-transparent'
-                      }`}
-                    >
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        {/* Label + Confidence */}
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-medium text-gray-900">
-                            {record.field}
-                          </span>
-
-                          <span className={`inline-flex items-right px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${record.confidence !== null && record.confidence >= 95 ? 'bg-emerald-100' :
-                            record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
-                              record.confidence !== null ? 'bg-red-100' : 'bg-gray-100'
-                            }`}>
-                            {record.confidencePercent !== '-' ? `${record.confidencePercent}%` : '-'}
-                          </span>
-                        </div>
-
-                        {/* Input Wrapper */}
-                        <div className="flex items-center border border-gray-200 rounded-lg px-2 py-1.5 bg-[#F6F6F6]">
-
-                          {editingField === record.key ? (
-                            <input
-                              type="text"
-                              autoFocus
-                              value={editedValues[record.key] ?? record.value}
-                              onChange={(e) =>
-                                setEditedValues({
-                                  ...editedValues,
-                                  [record.key]: e.target.value,
-                                })
-                              }
-                              onBlur={() => setEditingField(null)}
-                              className="w-full text-xs outline-none"
-                            />
-                          ) : (
-                            <div className="flex-1 text-xs text-gray-700 flex items-center gap-15">
-                              {editedValues[record.key] &&
-                                editedValues[record.key] !== record.value ? (
-                                <>
-                                  <span className="line-through text-gray-600 text-left bg-[#F9B53642]">
-                                    {record.value}
-                                  </span>
-                                  <span className="text-gray-600 text-center "><img
-                                    src={arrowIcon}
-                                    alt="edit"
-                                    className="w-8 h-2"
-                                  /></span>
-                                  <span className="text-gray-600 text-right">{editedValues[record.key]}</span>
-                                </>
-                              ) : (
-                                <span>{record.value}</span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Pen Icon */}
-                          <button
-                            onClick={() => setEditingField(record.key)}
-                            className="ml-2"
-                          >
-                            <img
-                              src={editIcon}
-                              alt="edit"
-                              className="w-3 h-3 cursor-pointer"
-                            />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
