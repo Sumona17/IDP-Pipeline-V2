@@ -14,7 +14,10 @@ interface InstanceStepsModalProps {
 }
 
 interface DocumentReviewDiffValue {
+  key?: unknown;
+  field?: unknown;
   originalValue?: unknown;
+  newValue?: unknown;
   overrideValue?: unknown;
 }
 
@@ -85,16 +88,12 @@ const parseDocumentReviewPayload = (
   const rows: DocumentReviewTableRow[] = [];
   diff.forEach((entry) => {
     if (!entry || typeof entry !== "object") return;
-
-    Object.entries(entry as Record<string, DocumentReviewDiffValue>).forEach(
-      ([field, values]) => {
-        rows.push({
-          field,
-          originalValue: toDisplayValue(values?.originalValue),
-          overrideValue: toDisplayValue(values?.overrideValue),
-        });
-      },
-    );
+    const values = entry as DocumentReviewDiffValue;
+    rows.push({
+      field: toDisplayValue(values.field ?? values.key),
+      originalValue: toDisplayValue(values.originalValue),
+      overrideValue: toDisplayValue(values.newValue ?? values.overrideValue),
+    });
   });
 
   if (rows.length === 0) return null;
