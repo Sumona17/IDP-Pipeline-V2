@@ -22,6 +22,30 @@ interface ValidateDataApiResponse {
   data: ValidateDataResponse;
 }
 
+export interface DiffEntry {
+  key: string;
+  section: string;
+  field: string;
+  fieldPath?: string;
+  originalValue: string;
+  newValue: string;
+  confidence: number | null;
+  page: number;
+}
+
+export interface UpdateExtractedDataRequest {
+  submissionId: string;
+  documentId: string;
+  extractedDataJson: Record<string, any>;
+  diffJson: DiffEntry[];
+}
+
+export interface UpdateExtractedDataResponse {
+  success: boolean;
+  message: string;
+  data?: Record<string, any>;
+}
+
 export const getValidateData = async (payload: ValidateDataRequest): Promise<ValidateDataResponse> => {
   const response = await apiClient.post<ValidateDataApiResponse>(
     `${baseUrl}/api/v1/submissions/getValidateData`,
@@ -29,4 +53,18 @@ export const getValidateData = async (payload: ValidateDataRequest): Promise<Val
     { useCustomUrl: true }
   );
   return response.data;
+};
+
+export const updateExtractedData = async ( payload: UpdateExtractedDataRequest): Promise<UpdateExtractedDataResponse> => {
+  const response = await apiClient.post<{ success: boolean; message: string; data?: Record<string, any> }>(
+    `${baseUrl}/api/v1/submissions/updateExtractedData`,
+    {
+      submissionId:      payload.submissionId,
+      documentId:        payload.documentId,
+      extractedDataJson: payload.extractedDataJson,
+      diffJson:          payload.diffJson,
+    },
+    { useCustomUrl: true }
+  );
+  return response;
 };

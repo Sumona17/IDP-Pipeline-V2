@@ -12,9 +12,10 @@ interface UploadingFile {
 interface UploadDrawerProps {
   open: boolean;
   onClose: () => void;
+  submissionId?: string;
 }
 
-const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
+const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose, submissionId }) => {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -119,6 +120,8 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
         pending.map(f => f.file),
         abortControllersRef.current,
         {
+          // Pass submissionId to the API only when it is already known
+          ...(submissionId && { submissionId }),
           onFileProgress: (fileName, percent) => {
             setUploadingFiles(prev =>
               prev.map(f => f.file.name === fileName ? { ...f, progress: percent } : f)
@@ -139,7 +142,6 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
       );
       setSubmissionResult(sid);
     } catch (err) {
-      console.error('Batch upload failed:', err);
       setUploadingFiles(prev =>
         prev.map(f =>
           f.status === 'uploading'
@@ -188,21 +190,17 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={handleClose}
         className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       />
-
-      {/* Drawer */}
       <div
         className={`fixed top-0 right-0 h-full w-[460px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#E6DAFF] rounded-lg">
@@ -226,9 +224,7 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Drop Zone */}
           <div
             ref={dropZoneRef}
             onDragOver={handleDragOver}
@@ -267,7 +263,6 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
             />
           </div>
 
-          {/* Success Banner */}
           {submissionResult && (
             <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
               <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,7 +277,6 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
             </div>
           )}
 
-          {/* File Summary */}
           {uploadingFiles.length > 0 && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 text-xs">
@@ -304,7 +298,6 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
             </div>
           )}
 
-          {/* File List */}
           {uploadingFiles.length > 0 && (
             <div className="space-y-2">
               {uploadingFiles.map((f) => (
@@ -355,7 +348,6 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
             </div>
           )}
 
-          {/* Empty State */}
           {uploadingFiles.length === 0 && (
             <div className="text-center py-8 text-gray-400">
               <div className="mx-auto w-12 h-12 bg-[#E6DAFF]/40 rounded-full flex items-center justify-center mb-2">
@@ -368,7 +360,6 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex-shrink-0 border-t border-gray-200 px-5 py-3.5 bg-gray-50 flex items-center justify-between gap-3">
           <button
             onClick={handleClose}

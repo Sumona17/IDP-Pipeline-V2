@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Upload, message, Progress } from "antd";
-import type { UploadProps } from "antd";
+import { Table, Button, message, Progress } from "antd";
 import { EyeOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSubmissionDocuments, type SubmissionDocument } from "../../services/document-list-service";
@@ -13,6 +12,7 @@ import "../../styles/uploaded-documents.scss";
 import { documentColumns } from "../../data/static-text";
 import PdfViewerModal from "../../components/Pdf-Viewer-Modal";
 import { formatTimestamp } from "../../utils/global-sort";
+import UploadDrawer from "../../components/file-upload/file-upload";
 
 interface DocumentRow {
   key: string;
@@ -60,6 +60,7 @@ export default function DocumentUploaded() {
   const [instanceStepsError, setInstanceStepsError] = useState<string | null>(null);
   const [showInstanceStepsModal, setShowInstanceStepsModal] = useState(false);
   const [activeInstanceId, setActiveInstanceId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!submissionId) return;
@@ -76,22 +77,7 @@ export default function DocumentUploaded() {
       }
     };
     fetchDocs();
-  }, [submissionId]);
-
-  const handleUpload: UploadProps["customRequest"] = async ({ file, onSuccess, onError }) => {
-    if (!submissionId) {
-      message.error("Submission ID not found");
-      return;
-    }
-    try {
-      message.loading({ content: "Uploading document...", key: "upload" });
-      message.success({ content: "Document uploaded successfully", key: "upload" });
-      onSuccess?.("ok");
-    } catch (error) {
-      message.error({ content: "File upload failed", key: "upload" });
-      onError?.(error as Error);
-    }
-  };
+  }, [submissionId, drawerOpen, setDrawerOpen])
 
   const openViewer = (fileKey: string, name: string) => {
     setSelectedPdfUrl(fileKey);
@@ -276,11 +262,9 @@ export default function DocumentUploaded() {
       <div className="uploaded-docs-header">
         <h2 className="page-title">Documents Uploaded</h2>
 
-        <Upload accept=".pdf" showUploadList={false} customRequest={handleUpload}>
-          <Button icon={<UploadOutlined />} className="upload-document-btn">
+          <Button icon={<UploadOutlined />} className="upload-document-btn" onClick={() => setDrawerOpen(true)}>
             Upload Document
           </Button>
-        </Upload>
       </div>
 
       <Table
@@ -306,6 +290,7 @@ export default function DocumentUploaded() {
         instanceStepsError={instanceStepsError}
         onClose={closeLogsModal}
       />
+      <UploadDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} submissionId={submissionId} />
     </div>
   );
 }
