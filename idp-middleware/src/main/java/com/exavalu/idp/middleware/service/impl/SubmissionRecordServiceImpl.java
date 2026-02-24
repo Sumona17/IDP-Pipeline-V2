@@ -82,7 +82,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
                 .workflowInstanceId(dataRequestDto.getDocumentId())
                 .nodeName("DOCUMENT_REVIEW")
                 .status("IN_PROGRESS")
-                .message("Document Ingested")
+                .message("Document Updated")
                 .requestPayload(extractedNode)
                 .responsePayload(wrappedDiff)
                 .build();
