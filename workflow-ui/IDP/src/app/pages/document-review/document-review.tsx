@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getValidateData } from '../../services/file-validate-service';
+import editIcon from '../../../../public/assets/icons/penicon.png';
+import arrowIcon from '../../../../public/assets/icons/arrowicon.png'
 
 interface BoundingBox {
   Left: number;
@@ -33,34 +35,40 @@ const DocumentComparison: React.FC = () => {
   const { submissionId, documentId, extractedDataKey: encodedDataKey, originalFileKey: encodedFileKey } = useParams<{ submissionId: string; documentId: string; extractedDataKey: string; originalFileKey: string }>();
 
   const extractedDataKey = decodeURIComponent(encodedDataKey ?? '');
-  const originalFileKey  = decodeURIComponent(encodedFileKey ?? '');
+  const originalFileKey = decodeURIComponent(encodedFileKey ?? '');
 
-  const [apiResponse, setApiResponse]             = useState<any>(null);
-  const [encodedPdfData, setEncodedPdfData]       = useState<string>('');
-  const [selectedField, setSelectedField]         = useState<TableRow | null>(null);
-  const [currentPage, setCurrentPage]             = useState<number>(1);
-  const [totalPages, setTotalPages]               = useState<number>(0);
-  const [zoom, setZoom]                           = useState<number>(1);
-  const [baseScale, setBaseScale]                 = useState<number>(1);
-  const [searchText, setSearchText]               = useState('');
-  const [confidenceFilter, setConfidenceFilter]   = useState('all');
-  const [rowEdits, setRowEdits]                   = useState<Record<string, RowEdit>>({});
-  const [renderedPages, setRenderedPages]         = useState<Record<number, any>>({});
-  const [naturalPageSize, setNaturalPageSize]     = useState({ width: 0, height: 0 });
-  const [highlightBox, setHighlightBox]           = useState<any>(null);
-  const [isPdfLoading, setIsPdfLoading]           = useState(false);
-  const [isDataLoading, setIsDataLoading]         = useState(true);
-  const [pdfError, setPdfError]                   = useState<string>('');
-  const [dataError, setDataError]                 = useState<string>('');
+  console.log("documentId::", documentId);
 
-  const containerRef      = useRef<HTMLDivElement>(null);
-  const pdfScrollRef      = useRef<HTMLDivElement>(null);
-  const pdfDocRef         = useRef<any>(null);
+
+  const [apiResponse, setApiResponse] = useState<any>(null);
+  const [encodedPdfData, setEncodedPdfData] = useState<string>('');
+  const [selectedField, setSelectedField] = useState<TableRow | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(1);
+  const [baseScale, setBaseScale] = useState<number>(1);
+  const [searchText, setSearchText] = useState('');
+  const [confidenceFilter, setConfidenceFilter] = useState('all');
+  const [rowEdits, setRowEdits] = useState<Record<string, RowEdit>>({});
+  const [renderedPages, setRenderedPages] = useState<Record<number, any>>({});
+  const [naturalPageSize, setNaturalPageSize] = useState({ width: 0, height: 0 });
+  const [highlightBox, setHighlightBox] = useState<any>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [pdfError, setPdfError] = useState<string>('');
+  const [dataError, setDataError] = useState<string>('');
+  const [editingField, setEditingField] = useState<any>(null);
+  const [editedValues, setEditedValues] = useState<any>({});
+  const [pageFilter, setPageFilter] = useState<string>('all');
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pdfScrollRef = useRef<HTMLDivElement>(null);
+  const pdfDocRef = useRef<any>(null);
   const pagesContainerRef = useRef<HTMLDivElement>(null);
-  const renderTasksRef    = useRef<Record<number, any>>({});
-  const pdfjsRef          = useRef<any>(null);
+  const renderTasksRef = useRef<Record<number, any>>({});
+  const pdfjsRef = useRef<any>(null);
 
-  const DPI_SCALE            = 2;
+  const DPI_SCALE = 2;
   const CONFIDENCE_THRESHOLD = 70;
 
   const formatConfidenceScore = (score: number | null): string => {
@@ -201,7 +209,7 @@ const DocumentComparison: React.FC = () => {
         pdfDocRef.current = pdf;
         setTotalPages(pdf.numPages);
         const page = await pdf.getPage(1);
-        const naturalWidth  = page.view[2];
+        const naturalWidth = page.view[2];
         const naturalHeight = page.view[3];
         setNaturalPageSize({ width: naturalWidth, height: naturalHeight });
         const container = containerRef.current;
@@ -226,24 +234,24 @@ const DocumentComparison: React.FC = () => {
       const currentScale = baseScale * zoom;
       const newRenderedPages: Record<number, any> = {};
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page     = await pdfDocRef.current.getPage(pageNum);
-        const canvas   = document.createElement('canvas');
-        const context  = canvas.getContext('2d', { alpha: false });
+        const page = await pdfDocRef.current.getPage(pageNum);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { alpha: false });
         const viewport = page.getViewport({ scale: currentScale * DPI_SCALE });
         canvas.height = viewport.height;
-        canvas.width  = viewport.width;
+        canvas.width = viewport.width;
         context!.fillStyle = 'white';
         context!.fillRect(0, 0, canvas.width, canvas.height);
-        const displayWidth  = viewport.width  / DPI_SCALE;
+        const displayWidth = viewport.width / DPI_SCALE;
         const displayHeight = viewport.height / DPI_SCALE;
-        canvas.style.width           = `${displayWidth}px`;
-        canvas.style.height          = `${displayHeight}px`;
-        canvas.style.display         = 'block';
-        canvas.style.marginBottom    = '16px';
-        canvas.style.border          = '1px solid #E5E7EB';
-        canvas.style.boxShadow       = '0 4px 6px -1px rgba(0,0,0,0.1)';
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+        canvas.style.display = 'block';
+        canvas.style.marginBottom = '16px';
+        canvas.style.border = '1px solid #E5E7EB';
+        canvas.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
         canvas.style.backgroundColor = 'white';
-        canvas.style.borderRadius    = '8px';
+        canvas.style.borderRadius = '8px';
         const renderTask = page.render({ canvasContext: context!, viewport });
         renderTasksRef.current[pageNum] = renderTask;
         try {
@@ -296,18 +304,18 @@ const DocumentComparison: React.FC = () => {
       const prev = renderedPages[i];
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
-    const canvasHeight       = naturalPageSize.height * currentScale;
-    const top                = bbox.Top    * canvasHeight;
-    const boxHeight          = bbox.Height * canvasHeight;
+    const canvasHeight = naturalPageSize.height * currentScale;
+    const top = bbox.Top * canvasHeight;
+    const boxHeight = bbox.Height * canvasHeight;
     const absoluteHighlightY = cumulativeHeight + top + boxHeight / 2;
-    const containerHeight    = pdfScrollRef.current.getBoundingClientRect().height;
+    const containerHeight = pdfScrollRef.current.getBoundingClientRect().height;
     pdfScrollRef.current.scrollTo({ top: Math.max(0, absoluteHighlightY - containerHeight / 2), behavior: 'smooth' });
   };
 
   const renderHighlightBox = () => {
     if (!highlightBox || Object.keys(renderedPages).length === 0 || !highlightBox.page) return null;
     const targetPage = highlightBox.page;
-    const pageData   = renderedPages[targetPage];
+    const pageData = renderedPages[targetPage];
     if (!pageData) return null;
     let cumulativeHeight = 0;
     for (let i = 1; i < targetPage; i++) {
@@ -315,14 +323,14 @@ const DocumentComparison: React.FC = () => {
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
     const currentScale = baseScale * zoom;
-    const canvasWidth  = naturalPageSize.width  * currentScale;
+    const canvasWidth = naturalPageSize.width * currentScale;
     const canvasHeight = naturalPageSize.height * currentScale;
-    const left         = highlightBox.Left   * canvasWidth;
-    const top          = highlightBox.Top    * canvasHeight;
-    const boxWidth     = highlightBox.Width  * canvasWidth;
-    const boxHeight    = highlightBox.Height * canvasHeight;
-    const absoluteTop  = cumulativeHeight + top;
-    const borderColor  = highlightBox.confidenceScore;
+    const left = highlightBox.Left * canvasWidth;
+    const top = highlightBox.Top * canvasHeight;
+    const boxWidth = highlightBox.Width * canvasWidth;
+    const boxHeight = highlightBox.Height * canvasHeight;
+    const absoluteTop = cumulativeHeight + top;
+    const borderColor = highlightBox.confidenceScore;
     return (
       <div
         className="absolute pointer-events-none border-[3px] transition-all rounded"
@@ -355,7 +363,7 @@ const DocumentComparison: React.FC = () => {
 
   const handleExportData = () => {
     const blob = new Blob([JSON.stringify(apiResponse?.extractedData ?? apiResponse, null, 2)], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url; link.download = 'extracted-data.json'; link.click();
     URL.revokeObjectURL(url);
@@ -364,19 +372,19 @@ const DocumentComparison: React.FC = () => {
   const handleDownloadPdf = () => {
     if (!encodedPdfData) return;
     const bytes = base64ToUint8Array(encodedPdfData);
-    const blob  = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
-    const url   = URL.createObjectURL(blob);
-    const link  = document.createElement('a');
+    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
     link.href = url; link.download = 'document.pdf'; link.click();
     URL.revokeObjectURL(url);
   };
 
-  const buildTableRows  = (): TableRow[] => (!apiResponse ? [] : flattenData(apiResponse));
+  const buildTableRows = (): TableRow[] => (!apiResponse ? [] : flattenData(apiResponse));
 
   const getFilteredRows = (): TableRow[] => {
     const allRows = buildTableRows();
     return allRows.filter((row) => {
-      const searchLower   = searchText.toLowerCase();
+      const searchLower = searchText.toLowerCase();
       const matchesSearch = !searchText || row.field.toLowerCase().includes(searchLower) || row.value.toLowerCase().includes(searchLower);
       if (row.isSection) return matchesSearch;
       const score = row.confidence;
@@ -384,18 +392,32 @@ const DocumentComparison: React.FC = () => {
       if (confidenceFilter !== 'all' && score !== null) {
         switch (confidenceFilter) {
           case 'below_50': matchesConfidence = score < 50; break;
-          case '50_75':    matchesConfidence = score >= 50 && score < 75; break;
-          case '75_80':    matchesConfidence = score >= 75 && score < 80; break;
-          case '80_85':    matchesConfidence = score >= 80 && score < 85; break;
-          case '85_90':    matchesConfidence = score >= 85 && score < 90; break;
+          case '50_75': matchesConfidence = score >= 50 && score < 75; break;
+          case '75_80': matchesConfidence = score >= 75 && score < 80; break;
+          case '80_85': matchesConfidence = score >= 80 && score < 85; break;
+          case '85_90': matchesConfidence = score >= 85 && score < 90; break;
           case '90_above': matchesConfidence = score >= 90; break;
         }
       }
-      return matchesSearch && matchesConfidence;
+      let matchesPage = true;
+      if (pageFilter !== 'all') {
+        matchesPage = row.page === Number(pageFilter);
+      }
+      return matchesSearch && matchesConfidence && matchesPage;
     });
   };
+  const allRows = buildTableRows();
+
+  const uniquePages = Array.from(
+    new Set(
+      allRows
+        .filter(row => !row.isSection && row.page !== undefined)
+        .map(row => row.page)
+    )
+  ).sort((a, b) => a - b);
 
   const filteredRows = getFilteredRows();
+  console.log('Filtered Rows:', filteredRows);
 
   if (isPdfLoading || isDataLoading) {
     return (
@@ -441,25 +463,137 @@ const DocumentComparison: React.FC = () => {
           </div>
 
           {/* Right: export */}
-          <button
-            onClick={handleExportData}
-            className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12" />
-            </svg>
-            Export Data
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportData}
+              className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors flex items-center"
+            >
+              <svg
+                className="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12"
+                />
+              </svg>
+              Export Data
+            </button>
+
+            <button
+              className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors"
+            >
+              Save
+            </button>
+
+            <button
+              className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors"
+            >
+              Submit
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ── Main panels ────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden gap-4 p-4">
 
-        {/* ── Left: data table ─────────────────────────────── */}
-        <div className="w-[45%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+
+
+        {/* ── left: PDF viewer ────────────────────────────── */}
+        <div className="w-[65%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+
+          {/* PDF toolbar */}
+          <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-sm font-semibold text-[#4318FF]  flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  Document
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Total Pages: <span className="text-xs text-gray-600">{totalPages}</span></p>
+              </div>
+
+              {/* Zoom controls */}
+              <div className="flex items-center gap-2 px-3 py-2    text-xs">
+                <div className="flex items-center gap-1 font-semibold ">
+                  <span className="px-2 py-0.5  text-[#3C20F6] rounded-full text-xs font-medium">
+                    {String(currentPage).padStart(2, '0')}
+                  </span>
+                  <span className="text-gray-400">/</span>
+                  <span className="text-gray-600">{String(totalPages).padStart(2, '0')}</span>
+                </div>
+
+                <div className="flex-1 flex items-center gap-2">
+                  <button
+                    onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
+                    disabled={zoom <= 0.25}
+                    className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    </svg>
+                  </button>
+
+                  <div className="flex-1 flex items-center gap-1.5">
+                    <input
+                      type="range" min="0.25" max="4" step="0.25" value={zoom}
+                      onChange={(e) => setZoom(Number(e.target.value))}
+                      className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]"
+                    />
+                    <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white ">
+                      {Math.round(zoom * 100)}%
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => setZoom((prev) => Math.min(prev + 0.25, 4))}
+                    disabled={zoom >= 4}
+                    className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={!encodedPdfData}
+                  className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-xs font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </button>
+              </div>
+            </div>
+
+
+          </div>
+
+          {/* PDF canvas */}
+          <div ref={pdfScrollRef} className="flex-1 overflow-auto p-4 bg-gray-50">
+            <div ref={containerRef} className="relative">
+              <div ref={pagesContainerRef} className="relative" />
+              {renderHighlightBox()}
+            </div>
+          </div>
+        </div>
+        {/* ── right: data table ─────────────────────────────── */}
+        <div className="w-[35%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
 
           {/* Filters */}
+          <h2 className="px-4 py-3  text-sm font-semibold text-[#4318FF] flex items-center gap-15">
+
+            Mapped Data
+          </h2>
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
             <div className="relative flex-shrink-0">
               <select
@@ -481,7 +615,29 @@ const DocumentComparison: React.FC = () => {
                 </svg>
               </div>
             </div>
-            <div className="relative flex-1">
+            <div className="relative flex-shrink-0 ml-2">
+              <select
+                value={pageFilter}
+                onChange={(e) => setPageFilter(e.target.value)}
+                className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg 
+               focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent 
+               bg-white appearance-none cursor-pointer outline-none"
+              >
+                <option value="all">All Pages</option>
+                {uniquePages.map((page) => (
+                  <option key={page} value={page}>
+                    Page {page}
+                  </option>
+                ))}
+              </select>
+
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            {/* <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -494,13 +650,13 @@ const DocumentComparison: React.FC = () => {
                 onChange={(e) => setSearchText(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent outline-none"
               />
-            </div>
+            </div> */}
           </div>
 
           {/* Table */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             <table className="w-full border-collapse text-sm">
-              <thead className="bg-[#E6DAFF] sticky top-0 z-10">
+              {/* <thead className="bg-[#E6DAFF] sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[20%]">Document Provision</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[20%]">Extracted Value</th>
@@ -508,7 +664,8 @@ const DocumentComparison: React.FC = () => {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[8%]">Review</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#3C20F6] border-b border-[#d4c5ff] w-[22%]">Override Value</th>
                 </tr>
-              </thead>
+              </thead> */}
+
               <tbody className="bg-white divide-y divide-gray-50">
                 {filteredRows.map((record) => {
                   if (record.isSection) {
@@ -526,9 +683,10 @@ const DocumentComparison: React.FC = () => {
                     );
                   }
 
-                  const editState     = rowEdits[record.key];
-                  const isReviewed    = editState?.review || false;
+                  const editState = rowEdits[record.key];
+                  const isReviewed = editState?.review || false;
                   const overrideValue = editState?.overrideValue || record.value;
+
 
                   return (
                     <tr
@@ -540,34 +698,71 @@ const DocumentComparison: React.FC = () => {
                           : 'hover:bg-gray-50 border-l-4 border-l-transparent'
                       }`}
                     >
-                      <td className="px-4 py-3 text-xs font-medium text-gray-900">{record.field}</td>
-                      <td className="px-4 py-3 text-xs text-gray-700">{record.value}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
-                          record.confidence !== null && record.confidence >= 95 ? 'bg-emerald-100' :
-                          record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
-                          record.confidence !== null ? 'bg-red-100' : 'bg-gray-100'
-                        }`}>
-                          {record.confidencePercent !== '-' ? `${record.confidencePercent}%` : '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isReviewed}
-                          onChange={(e) => handleReviewChange(e.target.checked, record)}
-                          className="w-4 h-4 text-[#3C20F6] rounded border-2 border-gray-300 focus:ring-2 focus:ring-[#3C20F6] focus:ring-offset-1 cursor-pointer accent-[#3C20F6]"
-                        />
-                      </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          disabled={!isReviewed}
-                          value={overrideValue}
-                          onChange={(e) => handleOverrideChange(e.target.value, record)}
-                          placeholder="Override value"
-                          className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed outline-none transition-colors"
-                        />
+                        {/* Label + Confidence */}
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-medium text-gray-900">
+                            {record.field}
+                          </span>
+
+                          <span className={`inline-flex items-right px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${record.confidence !== null && record.confidence >= 95 ? 'bg-emerald-100' :
+                            record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
+                              record.confidence !== null ? 'bg-red-100' : 'bg-gray-100'
+                            }`}>
+                            {record.confidencePercent !== '-' ? `${record.confidencePercent}%` : '-'}
+                          </span>
+                        </div>
+
+                        {/* Input Wrapper */}
+                        <div className="flex items-center border border-gray-200 rounded-lg px-2 py-1.5 bg-[#F6F6F6]">
+
+                          {editingField === record.key ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editedValues[record.key] ?? record.value}
+                              onChange={(e) =>
+                                setEditedValues({
+                                  ...editedValues,
+                                  [record.key]: e.target.value,
+                                })
+                              }
+                              onBlur={() => setEditingField(null)}
+                              className="w-full text-xs outline-none"
+                            />
+                          ) : (
+                            <div className="flex-1 text-xs text-gray-700 flex items-center gap-15">
+                              {editedValues[record.key] &&
+                                editedValues[record.key] !== record.value ? (
+                                <>
+                                  <span className="line-through text-gray-600 text-left bg-[#F9B53642]">
+                                    {record.value}
+                                  </span>
+                                  <span className="text-gray-600 text-center "><img
+                                    src={arrowIcon}
+                                    alt="edit"
+                                    className="w-8 h-2"
+                                  /></span>
+                                  <span className="text-gray-600 text-right">{editedValues[record.key]}</span>
+                                </>
+                              ) : (
+                                <span>{record.value}</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Pen Icon */}
+                          <button
+                            onClick={() => setEditingField(record.key)}
+                            className="ml-2"
+                          >
+                            <img
+                              src={editIcon}
+                              alt="edit"
+                              className="w-3 h-3 cursor-pointer"
+                            />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -576,88 +771,6 @@ const DocumentComparison: React.FC = () => {
             </table>
           </div>
         </div>
-
-        {/* ── Right: PDF viewer ────────────────────────────── */}
-        <div className="w-[55%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-
-          {/* PDF toolbar */}
-          <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-[#3C20F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  Document
-                </h2>
-                <p className="text-xs text-gray-400 mt-0.5">Total Pages: {totalPages}</p>
-              </div>
-            </div>
-
-            {/* Zoom controls */}
-            <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-xs">
-              <div className="flex items-center gap-1 font-semibold text-gray-700">
-                <span className="px-2 py-0.5 bg-[#E6DAFF] text-[#3C20F6] rounded-full text-xs font-medium">
-                  {String(currentPage).padStart(2, '0')}
-                </span>
-                <span className="text-gray-400">/</span>
-                <span className="text-gray-600">{String(totalPages).padStart(2, '0')}</span>
-              </div>
-
-              <div className="flex-1 flex items-center gap-2">
-                <button
-                  onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
-                  disabled={zoom <= 0.25}
-                  className="p-1 rounded border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  </svg>
-                </button>
-
-                <div className="flex-1 flex items-center gap-1.5">
-                  <input
-                    type="range" min="0.25" max="4" step="0.25" value={zoom}
-                    onChange={(e) => setZoom(Number(e.target.value))}
-                    className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]"
-                  />
-                  <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white border border-gray-200 rounded">
-                    {Math.round(zoom * 100)}%
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => setZoom((prev) => Math.min(prev + 0.25, 4))}
-                  disabled={zoom >= 4}
-                  className="p-1 rounded border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-              <button
-                onClick={handleDownloadPdf}
-                disabled={!encodedPdfData}
-                className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-xs font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download
-              </button>
-            </div>
-          </div>
-
-          {/* PDF canvas */}
-          <div ref={pdfScrollRef} className="flex-1 overflow-auto p-4 bg-gray-50">
-            <div ref={containerRef} className="relative">
-              <div ref={pagesContainerRef} className="relative" />
-              {renderHighlightBox()}
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   );
