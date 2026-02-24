@@ -63,6 +63,7 @@ public class WorkflowEngineImpl implements WorkflowEngine {
                     instanceRepository.save(instance);
                 }
 
+
                 String type = currentNode.get("type").asText();
 
                 try{

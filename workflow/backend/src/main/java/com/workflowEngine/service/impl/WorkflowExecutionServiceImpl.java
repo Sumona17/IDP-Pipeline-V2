@@ -135,6 +135,14 @@ public class WorkflowExecutionServiceImpl implements WorkflowExecutionService {
             return instance;
         }
 
+        if ("IN_PROGRESS".equals(request.getStatus())) {
+            instance.setCurrentNodeStatus("IN_PROGRESS");
+            instance.setCurrentNodeName(request.getNodeName());
+            instance.setStatus("WAITING");
+            instanceRepo.save(instance);
+            return instance;
+        }
+
         if ("FAILED".equals(request.getStatus())) {
             instance.setCurrentNodeStatus("FAILED");
             instance.setCurrentNodeName(request.getNodeName());
