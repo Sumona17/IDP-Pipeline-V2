@@ -16,6 +16,39 @@ export const InstancesTable = ({
   openInstanceSteps,
 }: InstancesTableProps) => {
   const navigate = useNavigate();
+  const getWorkflowName = (instance: ExecutionInstance) => {
+    const item = instance as ExecutionInstance & {
+      workflow?: { name?: string };
+      workflowDefinition?: { name?: string };
+    };
+
+    return (
+      item.workflowName ||
+      item.workflow?.name ||
+      item.workflowDefinition?.name ||
+      "-"
+    );
+  };
+  const getDuration = (instance: ExecutionInstance) => {
+    const value = String(instance.durationFormatted ?? "").trim();
+    const zeroLikeValues = new Set([
+      "",
+      "-",
+      "0s",
+      "0 sec",
+      "0 secs",
+      "0 second",
+      "0 seconds",
+      "00:00",
+      "00:00:00",
+    ]);
+
+    if (!instance.completedAt || zeroLikeValues.has(value.toLowerCase())) {
+      return "";
+    }
+
+    return value;
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -54,6 +87,9 @@ export const InstancesTable = ({
                   <td className="px-6 py-2 text-sm font-medium text-gray-900">
                     {instance && instance.instanceId}
                   </td>
+                  <td className="px-6 py-2 text-sm font-medium text-gray-800">
+                    {getWorkflowName(instance)}
+                  </td>
                   <td className="px-6 py-2 text-center">
                     <div className="flex flex-col items-center gap-1.5">
                       {getStatusBadge(instance.status)}
@@ -75,9 +111,7 @@ export const InstancesTable = ({
                       : "-"}
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
-                    {instance.durationFormatted
-                      ? instance.durationFormatted
-                      : "0s"}
+                    {getDuration(instance) || <span className="text-gray-400">-</span>}
                   </td>
                   {/* <td className="px-6 py-2">
                     <button
@@ -129,7 +163,7 @@ export const InstancesTable = ({
             {filteredExecutions.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-6 py-12 text-center text-gray-500"
                 >
                   <div className="flex flex-col items-center gap-3">

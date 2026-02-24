@@ -51,25 +51,6 @@ export const Dashboard = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    axios
-      .get(`${import.meta.env.VITE_APP_BASE_URL}/findAll`)
-      .then((response) => {
-        setAllWorkflows(response.data);
-      })
-      .catch(() => {
-        console.log("error");
-      });
-    axios
-      .get(`${import.meta.env.VITE_APP_BASE_URL}/findAllExecutions`)
-      .then((response) => {
-        setAllInstances(response.data);
-      })
-      .catch(() => {
-        console.log("error");
-      });
-  }, []);
-
   const fetchInstanceSteps = async (
     instanceId: string,
   ): Promise<InstanceStep[]> => {
@@ -103,14 +84,31 @@ export const Dashboard = () => {
 
   const fetchInstances = async () => {
     setLoading(true);
-    setInstances(allInstances);
-    setLoading(false);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_BASE_URL}/findAllExecutions`,
+      );
+      setAllInstances(response.data);
+      setInstances(response.data);
+    } catch (error) {
+      console.log("error", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchWorkflows = async () => {
     setLoading(true);
-    setAllWorkflows(allWorkflows);
-    setLoading(false);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_BASE_URL}/findAll`,
+      );
+      setAllWorkflows(response.data);
+    } catch (error) {
+      console.log("error", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -120,6 +118,10 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchWorkflows();
   }, []);
+
+  const handleRefresh = async () => {
+    await Promise.all([fetchInstances(), fetchWorkflows()]);
+  };
 
   useEffect(() => {
     const filterByCommon = (
@@ -252,13 +254,13 @@ export const Dashboard = () => {
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => navigate("/designer")}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1e94bf] text-white rounded-lg hover:bg-blue-700 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-[#375A7F] text-white rounded-lg hover:bg-[#2F4E70] transition"
           >
             <Plus className="w-4 h-4" />
             New Workflow
           </button>
           <button
-            onClick={fetchInstances}
+            onClick={handleRefresh}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
           >
@@ -272,14 +274,22 @@ export const Dashboard = () => {
 
       <div className="inline-flex flex-row w-full md:w-[30%] rounded-lg p-0 pl-0 pr-0 mb-4 overflow-hidden">
         <div
-          className={`w-[50%] text-center cursor-pointer font-bold rounded-l-lg border border-gray-200 p-2.5 ${selectedTab === "workflows" ? "bg-[#1e94bf] text-white" : ""}`}
+          className={`w-[50%] text-center cursor-pointer font-bold rounded-l-lg border border-gray-200 p-2.5 transition-all ${
+            selectedTab === "workflows"
+              ? "bg-[#375A7F] text-white shadow-md -translate-y-0.5"
+              : "bg-white text-gray-700"
+          }`}
           onClick={() => setSelectedTab("workflows")}
         >
           Workflows
         </div>
 
         <div
-          className={`w-[50%] text-center cursor-pointer font-bold rounded-r-lg border border-gray-200 border-l-0 p-2.5 ${selectedTab === "instances" ? "bg-[#1e94bf] text-white" : ""}`}
+          className={`w-[50%] text-center cursor-pointer font-bold rounded-r-lg border border-gray-200 border-l-0 p-2.5 transition-all ${
+            selectedTab === "instances"
+              ? "bg-[#375A7F] text-white shadow-md -translate-y-0.5"
+              : "bg-white text-gray-700"
+          }`}
           onClick={() => setSelectedTab("instances")}
         >
           Instances
