@@ -1,6 +1,7 @@
 package com.exavalu.idp.middleware.repository.impl;
 
 import com.exavalu.idp.middleware.dto.SubmissionDocumentInfoResponseDto;
+import com.exavalu.idp.middleware.dto.SubmissionFileMetaDto;
 import com.exavalu.idp.middleware.dto.SubmissionSummaryResponseDto;
 import com.exavalu.idp.middleware.repository.SubmissionRepository;
 import lombok.RequiredArgsConstructor;
@@ -175,6 +176,77 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         dynamoDbClient.updateItem(updateRequest);
     }
 
+    @Override
+    public SubmissionFileMetaDto getFileMeta(String submissionId, String documentId) {
+
+        GetItemResponse response =
+                dynamoDbClient.getItem(GetItemRequest.builder()
+                        .tableName(tableName)
+                        .key(Map.of(
+                                "submissionId",
+                                AttributeValue.fromS(submissionId)
+                        ))
+                        .build());
+
+        Map<String, AttributeValue> item = response.item();
+
+        if (item == null || !item.containsKey("file_contains")) {
+            throw new RuntimeException("Submission not found");
+        }
+
+        List<AttributeValue> files = item.get("file_contains").l();
+
+        for (int i = 0; i < files.size(); i++) {
+
+            Map<String, AttributeValue> m = files.get(i).m();
+
+            if (documentId.equals(m.get("documentId").s())) {
+
+                return new SubmissionFileMetaDto(
+                        i,
+                        m.get("extractedDataS3Key") != null
+                                ? m.get("extractedDataS3Key").s()
+                                : null,
+                        m.get("fileName").s()
+                );
+            }
+        }
+
+        throw new RuntimeException("Document not found");
+    }
+
+    @Override
+    public void updateExtractedDataKey(String submissionId, String documentId,
+                                       String newKey, String updatedBy, String updatedAt) {
+
+        SubmissionFileMetaDto meta =
+                getFileMeta(submissionId, documentId);
+
+        dynamoDbClient.updateItem(
+                UpdateItemRequest.builder()
+                        .tableName(tableName)
+                        .key(Map.of(
+                                "submissionId",
+                                AttributeValue.fromS(submissionId)
+                        ))
+                        .updateExpression(
+                                "SET file_contains[" + meta.getIndex() + "].extractedDataS3Key = :newKey, " +
+                                        "file_contains[" + meta.getIndex() + "].updatedAt = :updatedAt, " +
+                                        "file_contains[" + meta.getIndex() + "].updatedBy = :updatedBy, " +
+                                        "updatedAt = :updatedAt, " +
+                                        "updatedBy = :updatedBy"
+                        )
+                        .expressionAttributeValues(Map.of(
+                                ":newKey",
+                                AttributeValue.fromS(newKey),
+                                ":updatedAt",
+                                AttributeValue.fromN(updatedAt),
+                                ":updatedBy",
+                                AttributeValue.fromS(updatedBy)
+                        ))
+                        .build());
+    }
+
 
 
     private SubmissionSummaryResponseDto mapToSubmissionSummary(
@@ -248,19 +320,19 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         return null;
     }
 
-    private String convertEpochToLocalDateTime(Object epochValue) {
-
-        if (epochValue == null) return null;
-
-        long epochSeconds = Long.parseLong(epochValue.toString());
-
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern("MMM dd, yyyy, hh:mm a");
-
-        return Instant.ofEpochSecond(epochSeconds)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime()
-                .format(formatter);
-    }
+//    private String convertEpochToLocalDateTime(Object epochValue) {
+//
+//        if (epochValue == null) return null;
+//
+//        long epochSeconds = Long.parseLong(epochValue.toString());
+//
+//        DateTimeFormatter formatter =
+//                DateTimeFormatter.ofPattern("MMM dd, yyyy, hh:mm a");
+//
+//        return Instant.ofEpochSecond(epochSeconds)
+//                .atZone(ZoneId.systemDefault())
+//                .toLocalDateTime()
+//                .format(formatter);
+//    }
 
 }

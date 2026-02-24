@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -97,14 +98,46 @@ public class S3FileService {
 
             try (InputStream is = s3Client.getObject(request)) {
 
-                JsonNode node = objectMapper.readTree(is);
+//                JsonNode node = objectMapper.readTree(is);
 
-                return objectMapper.treeToValue(node, Object.class);
+                JsonNode originalNode = objectMapper.readTree(is);
+
+                String submissionId = s3Key.split("/")[0];
+
+                String fullFileName = s3Key.substring(s3Key.lastIndexOf("/") + 1);
+
+                String documentName = fullFileName
+                        .replaceAll("\\.(pdf|txt|doc|docx)?\\.json$", "")
+                        .replaceAll("\\.json$", "");
+
+                ObjectNode headerInfo = objectMapper.createObjectNode();
+                headerInfo.put("submissionId", submissionId);
+                headerInfo.put("documentName", documentName);
+
+                ObjectNode rootNode = objectMapper.createObjectNode();
+                rootNode.set("headerInfo", headerInfo);
+                rootNode.set("data", originalNode);
+
+                return objectMapper.treeToValue(rootNode, Object.class);
+
+//                return objectMapper.treeToValue(node, Object.class);
             }
 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to read JSON from S3", e);
         }
+    }
+
+    public void uploadJsonToS3(String key, JsonNode jsonNode) {
+
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket("idp-output-json")
+                        .key(key)
+                        .contentType("application/json")
+                        .build(),
+                RequestBody.fromString(jsonNode.toString())
+        );
     }
 
 }

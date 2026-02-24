@@ -6,6 +6,8 @@ import com.exavalu.idp.middleware.service.SubmissionRecordService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -47,6 +49,17 @@ public class SubmissionController {
         ValidateDataInfoResponseDto response = service.getValidateData(request);;
 
         return ApiResponseDto.success(response, "Validate data fetched successfully");
+    }
+
+    @PostMapping("/updateExtractedData")
+    public ApiResponseDto<String> updateExtractedData(@RequestBody UpdateExtractedDataRequestDto request,
+                                                      @AuthenticationPrincipal Jwt jwt) {
+
+        String userName=jwt.getClaimAsString("username");
+        service.updateExtractedDataVersion(request,userName);
+
+        return ApiResponseDto.success("Data updated successfully for submissionId: "
+                + request.getSubmissionId(), "Update completed");
     }
 
 
