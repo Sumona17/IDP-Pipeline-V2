@@ -89,27 +89,31 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         workflowLogClient.logWorkflowEvent(logRequest);
 
-//        try {
-//            JsonNode extractedNodeForLog = objectMapper.readTree(
-//                    objectMapper.writeValueAsString(dataRequestDto.getExtractedDataJson()));
-//
-//            JsonNode diffNodeForLog = objectMapper.readTree(
-//                    objectMapper.writeValueAsString(dataRequestDto.getDiffJson()));
-//
-//            WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
-//                    .workflowInstanceId(dataRequestDto.getDocumentId())
-//                    .nodeName("DOCUMENT_REVIEW")
-//                    .status("IN_PROGRESS")
-//                    .message("Document Ingested")
-//                    .requestPayload(extractedNodeForLog)
-//                    .responsePayload(diffNodeForLog)
-//                    .build();
-//
-//            workflowLogClient.logWorkflowEvent(logRequest);
-//
-//        } catch (JsonProcessingException e) {
-//            log.error("Failed to parse json for the workflow event", e);
-//        }
+        return submissionId;
+    }
+
+    @Override
+    public String updateReviewCompletedStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy) {
+
+        String submissionId = dataRequestDto.getSubmissionId();
+        String documentId = dataRequestDto.getDocumentId();
+
+        String updatedAt = String.valueOf(Instant.now().getEpochSecond());
+
+        JsonNode extractedNode = objectMapper.valueToTree(dataRequestDto.getExtractedDataJson());
+
+        repository.updateReviewCompletedStatus(submissionId, documentId, updatedBy, updatedAt);
+
+        WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
+                .workflowInstanceId(dataRequestDto.getDocumentId())
+                .nodeName("DOCUMENT_REVIEW")
+                .status("COMPLETED")
+                .message("Document Submitted")
+                .requestPayload(objectMapper.createObjectNode())
+                .responsePayload(extractedNode)
+                .build();
+
+        workflowLogClient.logWorkflowEvent(logRequest);
 
         return submissionId;
     }

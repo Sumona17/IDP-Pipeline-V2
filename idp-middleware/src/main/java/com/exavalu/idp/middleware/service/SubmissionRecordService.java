@@ -10,5 +10,5 @@ public interface SubmissionRecordService {
     List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId);
     ValidateDataInfoResponseDto getValidateData(ValidateDataRequestDto request);
     String updateExtractedDataVersion(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);
-
+    String updateReviewCompletedStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);
 }

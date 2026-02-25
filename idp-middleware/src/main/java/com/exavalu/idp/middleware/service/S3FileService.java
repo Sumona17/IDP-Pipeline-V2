@@ -99,6 +99,7 @@ public class S3FileService {
             try (InputStream is = s3Client.getObject(request)) {
 
 //                JsonNode node = objectMapper.readTree(is);
+//                return objectMapper.treeToValue(node, Object.class);
 
                 JsonNode originalNode = objectMapper.readTree(is);
 
@@ -114,13 +115,15 @@ public class S3FileService {
                 headerInfo.put("submissionId", submissionId);
                 headerInfo.put("documentName", documentName);
 
+                if (originalNode.has("documentType")) {
+                    headerInfo.put("documentType", originalNode.get("documentType").asText());
+                }
+
                 ObjectNode rootNode = objectMapper.createObjectNode();
                 rootNode.set("headerInfo", headerInfo);
                 rootNode.set("data", originalNode);
 
                 return objectMapper.treeToValue(rootNode, Object.class);
-
-//                return objectMapper.treeToValue(node, Object.class);
             }
 
         } catch (Exception e) {

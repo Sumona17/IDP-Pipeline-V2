@@ -62,5 +62,16 @@ public class SubmissionController {
                 + request.getSubmissionId(), "Update completed");
     }
 
+    @PostMapping("/submitExtractedData")
+    public ApiResponseDto<String> submitExtractedData(@RequestBody UpdateExtractedDataRequestDto request,
+                                                      @AuthenticationPrincipal Jwt jwt) {
+
+        String userName=jwt.getClaimAsString("username");
+        service.updateReviewCompletedStatus(request,userName);
+
+        return ApiResponseDto.success("Data updated successfully for submissionId: "
+                + request.getSubmissionId(), "Update completed");
+    }
+
 
 }

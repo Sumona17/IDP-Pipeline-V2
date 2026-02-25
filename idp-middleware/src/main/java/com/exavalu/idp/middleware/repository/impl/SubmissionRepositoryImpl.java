@@ -48,7 +48,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                         "#st", "status"
                 ))
                 .expressionAttributeValues(Map.of(
-                        ":new", AttributeValue.fromS("NEW")
+                        ":new", AttributeValue.fromS("New")
                 ))
                 .build();
 
@@ -219,8 +219,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     public void updateExtractedDataKey(String submissionId, String documentId,
                                        String newKey, String updatedBy, String updatedAt) {
 
-        SubmissionFileMetaDto meta =
-                getFileMeta(submissionId, documentId);
+        SubmissionFileMetaDto meta = getFileMeta(submissionId, documentId);
 
         dynamoDbClient.updateItem(
                 UpdateItemRequest.builder()
@@ -247,6 +246,36 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                         .build());
     }
 
+    public void updateReviewCompletedStatus(String submissionId, String documentId,
+                                            String updatedBy, String updatedAt) {
+
+        SubmissionFileMetaDto meta = getFileMeta(submissionId, documentId);
+
+        int index = meta.getIndex();
+
+        dynamoDbClient.updateItem(
+                UpdateItemRequest.builder()
+                        .tableName(tableName)
+                        .key(Map.of(
+                                "submissionId",
+                                AttributeValue.fromS(submissionId)
+                        ))
+                        .updateExpression(
+                                "SET file_contains[" + index + "].ingestion_status = :status, " +
+                                        "file_contains[" + index + "].fileProgress = :progress, " +
+                                        "file_contains[" + index + "].updatedAt = :updatedAt, " +
+                                        "file_contains[" + index + "].updatedBy = :updatedBy, " +
+                                        "updatedAt = :updatedAt, " +
+                                        "updatedBy = :updatedBy"
+                        )
+                        .expressionAttributeValues(Map.of(
+                                ":status", AttributeValue.fromS("Review Completed"),
+                                ":progress", AttributeValue.fromN("100"),
+                                ":updatedAt", AttributeValue.fromN(updatedAt),
+                                ":updatedBy", AttributeValue.fromS(updatedBy)
+                        ))
+                        .build());
+    }
 
 
     private SubmissionSummaryResponseDto mapToSubmissionSummary(
@@ -319,20 +348,5 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
 
         return null;
     }
-
-//    private String convertEpochToLocalDateTime(Object epochValue) {
-//
-//        if (epochValue == null) return null;
-//
-//        long epochSeconds = Long.parseLong(epochValue.toString());
-//
-//        DateTimeFormatter formatter =
-//                DateTimeFormatter.ofPattern("MMM dd, yyyy, hh:mm a");
-//
-//        return Instant.ofEpochSecond(epochSeconds)
-//                .atZone(ZoneId.systemDefault())
-//                .toLocalDateTime()
-//                .format(formatter);
-//    }
 
 }
