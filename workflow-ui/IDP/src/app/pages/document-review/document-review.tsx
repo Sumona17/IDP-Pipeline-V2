@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { getValidateData, updateExtractedData } from '../../services/file-validate-service';
+import { getValidateData, submitExtractedData, updateExtractedData } from '../../services/file-validate-service';
 import editIcon from '../../../../public/assets/icons/penicon.png';
 import arrowIcon from '../../../../public/assets/icons/arrowicon.png';
 
@@ -298,6 +298,25 @@ const DocumentComparison: React.FC = () => {
         documentId:        documentId!,
         extractedDataJson: updatedData,
         diffJson:          diff,
+      });
+      showToast('success', 'Document saved successfully.');
+    } catch (error) {
+      showToast('error', error instanceof Error ? error.message : 'Submission failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [computeDiff, buildUpdatedData, submissionId, documentId, showToast]);
+
+
+  const handleFinalSubmit = useCallback(async () => {
+    const updatedData = buildUpdatedData();
+
+    setIsSubmitting(true);
+    try {
+      await submitExtractedData({
+        submissionId:      submissionId!,
+        documentId:        documentId!,
+        extractedDataJson: updatedData,
       });
       showToast('success', 'Document submitted successfully.');
     } catch (error) {
@@ -617,6 +636,8 @@ const DocumentComparison: React.FC = () => {
               </button>
               <button
                 className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                onClick={handleFinalSubmit}
+                disabled={isSubmitting}
               >
                 Submit
                 {/* {changedCount > 0 && (

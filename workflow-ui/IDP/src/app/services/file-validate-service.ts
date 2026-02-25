@@ -46,6 +46,12 @@ export interface UpdateExtractedDataResponse {
   data?: Record<string, any>;
 }
 
+export interface SubmitExtractedDataRequest {
+  submissionId: string;
+  documentId: string;
+  extractedDataJson: Record<string, any>;
+}
+
 export const getValidateData = async (payload: ValidateDataRequest): Promise<ValidateDataResponse> => {
   const response = await apiClient.post<ValidateDataApiResponse>(
     `${baseUrl}/api/v1/submissions/getValidateData`,
@@ -63,6 +69,19 @@ export const updateExtractedData = async ( payload: UpdateExtractedDataRequest):
       documentId:        payload.documentId,
       extractedDataJson: payload.extractedDataJson,
       diffJson:          payload.diffJson,
+    },
+    { useCustomUrl: true }
+  );
+  return response;
+};
+
+export const submitExtractedData = async ( payload: SubmitExtractedDataRequest): Promise<UpdateExtractedDataResponse> => {
+  const response = await apiClient.post<{ success: boolean; message: string; data?: Record<string, any> }>(
+    `${baseUrl}/api/v1/submissions/submitExtractedData`,
+    {
+      submissionId:      payload.submissionId,
+      documentId:        payload.documentId,
+      extractedDataJson: payload.extractedDataJson,
     },
     { useCustomUrl: true }
   );
