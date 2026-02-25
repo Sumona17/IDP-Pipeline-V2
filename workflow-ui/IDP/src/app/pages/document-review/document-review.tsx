@@ -616,9 +616,9 @@ const DocumentComparison: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-[18px] font-semibold text-gray-900">Document Review</h1>
-                <p className="text-xs text-gray-400 mt-0.5">
+                {/* <p className="text-xs text-gray-400 mt-0.5">
                   {apiResponse?.extractedData?.data?.documentType ?? 'Review and validate extracted document data'}
-                </p>
+                </p> */}
               </div>
             </div>
 

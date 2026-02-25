@@ -3,6 +3,7 @@ import apiClient from './handler';
 export interface PresignedUrlRequest {
   fileName: string;
   contentType: string;
+  userName: string;
   submissionId?: string;
 }
 
@@ -22,6 +23,7 @@ export interface UploadFileOptions {
 }
 
 export interface BatchUploadCallbacks {
+  userName: string;
   submissionId?: string;
   onFileProgress?: (fileName: string, percent: number) => void;
   onFileSuccess?: (fileName: string, meta: PresignedUrlResponse) => void;
@@ -30,11 +32,13 @@ export interface BatchUploadCallbacks {
 
 export const getPresignedUrls = async (
   files: File[],
+  userName: string,
   submissionId?: string
 ): Promise<PresignedUrlResponse[]> => {
   const payload: PresignedUrlRequest[] = files.map((file) => ({
     fileName: file.name,
     contentType: file.type,
+    userName,
     ...(submissionId && { submissionId }),
   }));
   return await apiClient.post<PresignedUrlResponse[]>('generate-presigned-url', payload);
@@ -82,9 +86,9 @@ export const uploadFileToS3 = async ({
 export const batchUploadFiles = async (
   files: File[],
   abortControllers: Record<string, AbortController>,
-  callbacks: BatchUploadCallbacks = {}
+  callbacks: BatchUploadCallbacks
 ): Promise<{ submissionId: string }> => {
-  const presignedList = await getPresignedUrls(files, callbacks.submissionId);
+  const presignedList = await getPresignedUrls(files, callbacks.userName, callbacks.submissionId);
   const submissionId = presignedList[0]?.submissionId ?? '';
 
   const presignedMap: Record<string, PresignedUrlResponse> = {};

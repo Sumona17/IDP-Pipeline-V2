@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Table, Button, message, Progress } from "antd";
-import { EyeOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
+import { EyeOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSubmissionDocuments, type SubmissionDocument } from "../../services/document-list-service";
 import { InstanceStepsModal, type InstanceLogStep } from "./InstanceStepsModal";
@@ -29,13 +29,15 @@ interface DocumentRow {
   fileProgress: string;
 }
 
+const INGESTION_IN_PROGRESS = "Ingestion in Progress";
+
 const mapToDocumentRow = (doc: SubmissionDocument): DocumentRow => ({
   key: doc.documentId,
   id: doc.documentId,
   name: doc.fileName,
   status: doc.status ?? "—",
   customer: "-",
-  createdAt:  formatTimestamp(parseInt(doc.createdAt), true),
+  createdAt: formatTimestamp(parseInt(doc.createdAt), true),
   date: new Date().toLocaleDateString("en-US"),
   size: doc.fileSize,
   fileUrl: doc.originalFileKey,
@@ -70,14 +72,13 @@ export default function DocumentUploaded() {
         const data = await getSubmissionDocuments(submissionId);
         setDocuments(data.map(mapToDocumentRow));
       } catch (err) {
-        console.error("Failed to fetch submission documents:", err);
         message.error("Failed to fetch documents");
       } finally {
         setLoading(false);
       }
     };
     fetchDocs();
-  }, [submissionId, drawerOpen, setDrawerOpen])
+  }, [submissionId, drawerOpen]);
 
   const openViewer = (fileKey: string, name: string) => {
     setSelectedPdfUrl(fileKey);
@@ -105,7 +106,6 @@ export default function DocumentUploaded() {
       URL.revokeObjectURL(url);
       message.success({ content: "File downloaded successfully", key: "download" });
     } catch (err) {
-      console.error("Failed to download document:", err);
       message.error({ content: "Failed to download file", key: "download" });
     }
   };
@@ -122,7 +122,6 @@ export default function DocumentUploaded() {
       );
       setInstanceSteps(Array.isArray(response) ? response : []);
     } catch (err) {
-      console.error("Failed to fetch instance logs:", err);
       setInstanceStepsError(err instanceof Error ? err.message : "Failed to load logs");
       setInstanceSteps([]);
     } finally {
@@ -137,29 +136,34 @@ export default function DocumentUploaded() {
     setActiveInstanceId(null);
   };
 
- const handleDocumentClick = (record: DocumentRow) => {
-  console.log('[DocumentUploaded] navigate params →', {
-      submissionId,
-      documentId: record.id,
-      extractedDataKey: record.extractedDataKey,
-      originalFileKey: record.originalFileKey,
-    });
+  const handleDocumentClick = (record: DocumentRow) => {
     navigate(
       `/document-review/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`
     );
   };
+
   const updatedColumns = documentColumns.map((col) => {
     if (col.key === "name") {
       return {
         ...col,
-        render: (_: unknown, record: DocumentRow) => (
-          <button
-            onClick={() => handleDocumentClick(record)}
-            className="text-[#3C20F6] hover:underline text-left truncate"
-          >
-            {record.name}
-          </button>
-        ),
+        render: (_: unknown, record: DocumentRow) => {
+          const isIngesting = record.status === INGESTION_IN_PROGRESS;
+          return isIngesting ? (
+            <span
+              className="text-gray-400 cursor-not-allowed truncate"
+              title="Document is being ingested, please wait..."
+            >
+              {record.name}
+            </span>
+          ) : (
+            <button
+              onClick={() => handleDocumentClick(record)}
+              className="text-[#3C20F6] hover:underline text-left truncate"
+            >
+              {record.name}
+            </button>
+          );
+        },
       };
     }
 
@@ -205,66 +209,69 @@ export default function DocumentUploaded() {
         ),
       };
     }
-  if (col.key === "fileProgress") {
-  return {
-    ...col,
-    render: (_: unknown, record: DocumentRow) => {
-      const progressValue = Number(record.fileProgress || 0);
 
-      const color =
-        progressValue === 100
-          ? "#52c41a"
-          : progressValue >= 70
-          ? "#1890ff"
-          : progressValue >= 30
-          ? "#faad14"
-          : "#ff4d4f";
+    if (col.key === "fileProgress") {
+      return {
+        ...col,
+        render: (_: unknown, record: DocumentRow) => {
+          const progressValue = Number(record.fileProgress || 0);
+          const color =
+            progressValue === 100
+              ? "#52c41a"
+              : progressValue >= 70
+              ? "#1890ff"
+              : progressValue >= 30
+              ? "#faad14"
+              : "#ff4d4f";
 
-      return (
-        <div style={{ minWidth: 100 }}>
-          <div style={{ display: "flex" }}>
-            
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: color,
-                minWidth: 35,
-              }}
-            >
-              {progressValue}%
-            </span>
+          return (
+            <div style={{ minWidth: 100 }}>
+              <div style={{ display: "flex" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color, minWidth: 35 }}>
+                  {progressValue}%
+                </span>
+                <Progress
+                  percent={progressValue}
+                  size="small"
+                  showInfo={false}
+                  strokeColor={color}
+                  style={{ flex: 1, marginBottom: 0 }}
+                  status={
+                    progressValue === 100
+                      ? "success"
+                      : progressValue > 0
+                      ? "active"
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
+          );
+        },
+      };
+    }
 
-            <Progress
-              percent={progressValue}
-              size="small"
-              showInfo={false}   
-              strokeColor={color}
-              style={{ flex: 1, marginBottom: 0 }}
-              status={
-                progressValue === 100
-                  ? "success"
-                  : progressValue > 0
-                  ? "active"
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-      );
-    },
-  };
-}
     return col;
   });
+
   return (
     <div className="uploaded-docs-container">
       <div className="uploaded-docs-header">
         <h2 className="page-title">Documents Uploaded</h2>
-
-          <Button icon={<UploadOutlined />} className="upload-document-btn" onClick={() => setDrawerOpen(true)}>
-            Upload Document
-          </Button>
+        <button
+          className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L9 7m3-3l3 3"
+            />
+          </svg>
+          Upload Files
+        </button>
       </div>
 
       <Table
@@ -276,12 +283,14 @@ export default function DocumentUploaded() {
         rowKey="key"
         size="small"
       />
+
       <PdfViewerModal
         visible={viewerVisible}
         onClose={closeViewer}
         fileUrl={selectedPdfUrl}
         fileName={selectedPdfName}
       />
+
       <InstanceStepsModal
         isOpen={showInstanceStepsModal}
         activeInstanceId={activeInstanceId}
@@ -290,7 +299,12 @@ export default function DocumentUploaded() {
         instanceStepsError={instanceStepsError}
         onClose={closeLogsModal}
       />
-      <UploadDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} submissionId={submissionId} />
+
+      <UploadDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        submissionId={submissionId}
+      />
     </div>
   );
 }

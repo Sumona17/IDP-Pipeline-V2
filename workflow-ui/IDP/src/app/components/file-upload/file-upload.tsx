@@ -1,5 +1,6 @@
 import React, { useState, useRef, type JSX } from 'react';
 import { batchUploadFiles } from '../../services/file-upload-service';
+import { useAuth } from "react-oidc-context";
 
 interface UploadingFile {
   id: string;
@@ -16,6 +17,11 @@ interface UploadDrawerProps {
 }
 
 const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose, submissionId }) => {
+
+  const auth = useAuth();
+
+  const user = auth.user?.profile
+
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -24,6 +30,8 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose, submissionId
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const abortControllersRef = useRef<Record<string, AbortController>>({});
+
+  const userName = user?.['cognito:username'] as string ?? '';
 
   const resetAll = () => {
     setUploadingFiles([]);
@@ -120,6 +128,7 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose, submissionId
         pending.map(f => f.file),
         abortControllersRef.current,
         {
+          userName,
           // Pass submissionId to the API only when it is already known
           ...(submissionId && { submissionId }),
           onFileProgress: (fileName, percent) => {
@@ -230,9 +239,9 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose, submissionId
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => !isUploading && fileInputRef.current?.click()}
+            onClick={() => !isUploading && !submissionResult && fileInputRef.current?.click()}
             className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 group select-none ${
-              isUploading
+              isUploading || submissionResult
                 ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-60'
                 : isDragging
                 ? 'cursor-copy border-[#3C20F6] bg-[#E6DAFF]/40'
@@ -258,7 +267,7 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose, submissionId
               multiple
               accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.png,.jpg,.jpeg"
               onChange={handleFileInput}
-              disabled={isUploading}
+              disabled={isUploading || !!submissionResult}
               className="hidden"
             />
           </div>
@@ -371,7 +380,7 @@ const UploadDrawer: React.FC<UploadDrawerProps> = ({ open, onClose, submissionId
           <div className="flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isUploading || !!submissionResult}
               className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
