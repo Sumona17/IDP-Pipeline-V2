@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getValidateData, submitExtractedData, updateExtractedData } from '../../services/file-validate-service';
 import editIcon from '../../../../public/assets/icons/penicon.png';
 import arrowIcon from '../../../../public/assets/icons/arrowicon.png';
+import { useNavigate } from "react-router-dom";
 
 interface BoundingBox {
   Left: number;
@@ -107,41 +108,42 @@ const DocumentComparison: React.FC = () => {
   }>();
 
   const extractedDataKey = decodeURIComponent(encodedDataKey ?? '');
-  const originalFileKey  = decodeURIComponent(encodedFileKey  ?? '');
+  const originalFileKey = decodeURIComponent(encodedFileKey ?? '');
 
-  const [apiResponse, setApiResponse]           = useState<any>(null);
-  const [encodedPdfData, setEncodedPdfData]     = useState<string>('');
-  const [selectedField, setSelectedField]       = useState<TableRow | null>(null);
-  const [currentPage, setCurrentPage]           = useState<number>(1);
-  const [totalPages, setTotalPages]             = useState<number>(0);
-  const [zoom, setZoom]                         = useState<number>(1);
-  const [baseScale, setBaseScale]               = useState<number>(1);
+  const [apiResponse, setApiResponse] = useState<any>(null);
+  const [encodedPdfData, setEncodedPdfData] = useState<string>('');
+  const [selectedField, setSelectedField] = useState<TableRow | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(1);
+  const [baseScale, setBaseScale] = useState<number>(1);
   const [confidenceFilter, setConfidenceFilter] = useState('all');
-  const [rowEdits, setRowEdits]                 = useState<Record<string, RowEdit>>({});
-  const [renderedPages, setRenderedPages]       = useState<Record<number, any>>({});
-  const [naturalPageSize, setNaturalPageSize]   = useState({ width: 0, height: 0 });
-  const [highlightBox, setHighlightBox]         = useState<any>(null);
-  const [isPdfLoading, setIsPdfLoading]         = useState(false);
-  const [isDataLoading, setIsDataLoading]       = useState(true);
-  const [pdfError, setPdfError]                 = useState<string>('');
-  const [dataError, setDataError]               = useState<string>('');
-  const [editingField, setEditingField]         = useState<any>(null);
-  const [pageFilter, setPageFilter]             = useState<string>('all');
-  const [isSubmitting, setIsSubmitting]         = useState(false);
-  const [editedValues, setEditedValues]         = useState<Record<string, EditedEntry>>({});
-  const [toasts, setToasts]                     = useState<Toast[]>([]);
-  const toastIdRef                              = useRef(0);
+  const [rowEdits, setRowEdits] = useState<Record<string, RowEdit>>({});
+  const [renderedPages, setRenderedPages] = useState<Record<number, any>>({});
+  const [naturalPageSize, setNaturalPageSize] = useState({ width: 0, height: 0 });
+  const [highlightBox, setHighlightBox] = useState<any>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [pdfError, setPdfError] = useState<string>('');
+  const [dataError, setDataError] = useState<string>('');
+  const [editingField, setEditingField] = useState<any>(null);
+  const [pageFilter, setPageFilter] = useState<string>('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editedValues, setEditedValues] = useState<Record<string, EditedEntry>>({});
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastIdRef = useRef(0);
+  const navigate = useNavigate();
 
-  const containerRef      = useRef<HTMLDivElement>(null);
-  const pdfScrollRef      = useRef<HTMLDivElement>(null);
-  const pdfDocRef         = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pdfScrollRef = useRef<HTMLDivElement>(null);
+  const pdfDocRef = useRef<any>(null);
   const pagesContainerRef = useRef<HTMLDivElement>(null);
-  const renderTasksRef    = useRef<Record<number, any>>({});
-  const pdfjsRef          = useRef<any>(null);
+  const renderTasksRef = useRef<Record<number, any>>({});
+  const pdfjsRef = useRef<any>(null);
 
-  const DPI_SCALE            = 2;
+  const DPI_SCALE = 2;
   const CONFIDENCE_THRESHOLD = 70;
-  const TOAST_DURATION_MS    = 4000;
+  const TOAST_DURATION_MS = 4000;
 
   const showToast = useCallback((type: ToastType, message: string) => {
     const id = ++toastIdRef.current;
@@ -253,14 +255,14 @@ const DocumentComparison: React.FC = () => {
           editedValues[row.key].newValue !== editedValues[row.key].originalValue
       )
       .map((row) => ({
-        key:           row.key,
-        section:       row.section ?? '',
-        field:         row.field,
-        fieldPath:     row.fieldPath,
+        key: row.key,
+        section: row.section ?? '',
+        field: row.field,
+        fieldPath: row.fieldPath,
         originalValue: editedValues[row.key].originalValue,
-        newValue:      editedValues[row.key].newValue,
-        confidence:    row.confidence,
-        page:          row.page,
+        newValue: editedValues[row.key].newValue,
+        confidence: row.confidence,
+        page: row.page,
       }));
   }, [apiResponse, editedValues]);
 
@@ -269,7 +271,7 @@ const DocumentComparison: React.FC = () => {
     const diff = computeDiff();
     if (diff.length === 0) return apiResponse?.extractedData?.data ?? apiResponse;
 
-    const updated  = JSON.parse(JSON.stringify(apiResponse?.extractedData?.data ?? apiResponse));
+    const updated = JSON.parse(JSON.stringify(apiResponse?.extractedData?.data ?? apiResponse));
     const sections = updated?.sections ?? updated?.extractedData?.data?.sections ?? {};
 
     diff.forEach(({ section, fieldPath, newValue }) => {
@@ -288,16 +290,16 @@ const DocumentComparison: React.FC = () => {
   }, [apiResponse, computeDiff]);
 
   const handleSubmit = useCallback(async () => {
-    const diff        = computeDiff();
+    const diff = computeDiff();
     const updatedData = buildUpdatedData();
 
     setIsSubmitting(true);
     try {
       await updateExtractedData({
-        submissionId:      submissionId!,
-        documentId:        documentId!,
+        submissionId: submissionId!,
+        documentId: documentId!,
         extractedDataJson: updatedData,
-        diffJson:          diff,
+        diffJson: diff,
       });
       showToast('success', 'Document saved successfully.');
     } catch (error) {
@@ -314,8 +316,8 @@ const DocumentComparison: React.FC = () => {
     setIsSubmitting(true);
     try {
       await submitExtractedData({
-        submissionId:      submissionId!,
-        documentId:        documentId!,
+        submissionId: submissionId!,
+        documentId: documentId!,
         extractedDataJson: updatedData,
       });
       showToast('success', 'Document submitted successfully.');
@@ -358,10 +360,10 @@ const DocumentComparison: React.FC = () => {
       try {
         const pdfjs = await import('pdfjs-dist');
         pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
-        pdfjsRef.current  = pdfjs;
-        const pdfBytes    = base64ToUint8Array(encodedPdfData);
+        pdfjsRef.current = pdfjs;
+        const pdfBytes = base64ToUint8Array(encodedPdfData);
         const loadingTask = pdfjs.getDocument({ data: pdfBytes, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true });
-        const pdf         = await loadingTask.promise;
+        const pdf = await loadingTask.promise;
         pdfDocRef.current = pdf;
         setTotalPages(pdf.numPages);
         const page = await pdf.getPage(1);
@@ -385,18 +387,18 @@ const DocumentComparison: React.FC = () => {
     Object.values(renderTasksRef.current).forEach((task: any) => { if (task?.cancel) task.cancel(); });
     renderTasksRef.current = {};
     try {
-      const currentScale     = baseScale * zoom;
+      const currentScale = baseScale * zoom;
       const newRenderedPages: Record<number, any> = {};
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page     = await pdfDocRef.current.getPage(pageNum);
-        const canvas   = document.createElement('canvas');
-        const context  = canvas.getContext('2d', { alpha: false });
+        const page = await pdfDocRef.current.getPage(pageNum);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { alpha: false });
         const viewport = page.getViewport({ scale: currentScale * DPI_SCALE });
-        canvas.height  = viewport.height;
-        canvas.width   = viewport.width;
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
         context!.fillStyle = 'white';
         context!.fillRect(0, 0, canvas.width, canvas.height);
-        const displayWidth  = viewport.width  / DPI_SCALE;
+        const displayWidth = viewport.width / DPI_SCALE;
         const displayHeight = viewport.height / DPI_SCALE;
         Object.assign(canvas.style, {
           width: `${displayWidth}px`, height: `${displayHeight}px`,
@@ -450,15 +452,15 @@ const DocumentComparison: React.FC = () => {
 
   const scrollToHighlight = (bbox: BoundingBox, targetPage: number) => {
     if (!pdfScrollRef.current || !renderedPages[targetPage]) return;
-    const currentScale       = baseScale * zoom;
-    let cumulativeHeight     = 0;
+    const currentScale = baseScale * zoom;
+    let cumulativeHeight = 0;
     for (let i = 1; i < targetPage; i++) {
       const prev = renderedPages[i];
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
-    const canvasHeight       = naturalPageSize.height * currentScale;
+    const canvasHeight = naturalPageSize.height * currentScale;
     const absoluteHighlightY = cumulativeHeight + bbox.Top * canvasHeight + (bbox.Height * canvasHeight) / 2;
-    const containerHeight    = pdfScrollRef.current.getBoundingClientRect().height;
+    const containerHeight = pdfScrollRef.current.getBoundingClientRect().height;
     pdfScrollRef.current.scrollTo({ top: Math.max(0, absoluteHighlightY - containerHeight / 2), behavior: 'smooth' });
   };
 
@@ -472,20 +474,20 @@ const DocumentComparison: React.FC = () => {
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
     const currentScale = baseScale * zoom;
-    const canvasWidth  = naturalPageSize.width  * currentScale;
+    const canvasWidth = naturalPageSize.width * currentScale;
     const canvasHeight = naturalPageSize.height * currentScale;
-    const borderColor  = highlightBox.confidenceScore;
+    const borderColor = highlightBox.confidenceScore;
     return (
       <div
         className="absolute pointer-events-none border-[3px] transition-all rounded"
         style={{
-          left:            `${highlightBox.Left   * canvasWidth  - 4}px`,
-          top:             `${cumulativeHeight + highlightBox.Top * canvasHeight - 4}px`,
-          width:           `${highlightBox.Width  * canvasWidth  + 8}px`,
-          height:          `${highlightBox.Height * canvasHeight + 8}px`,
+          left: `${highlightBox.Left * canvasWidth - 4}px`,
+          top: `${cumulativeHeight + highlightBox.Top * canvasHeight - 4}px`,
+          width: `${highlightBox.Width * canvasWidth + 8}px`,
+          height: `${highlightBox.Height * canvasHeight + 8}px`,
           borderColor,
           backgroundColor: `${borderColor}20`,
-          zIndex:          30,
+          zIndex: 30,
         }}
       >
         {selectedField && (
@@ -515,8 +517,8 @@ const DocumentComparison: React.FC = () => {
   const handleDownloadPdf = () => {
     if (!encodedPdfData) return;
     const bytes = base64ToUint8Array(encodedPdfData);
-    const blob  = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
-    const url   = URL.createObjectURL(blob);
+    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
     Object.assign(document.createElement('a'), { href: url, download: 'document.pdf' }).click();
     URL.revokeObjectURL(url);
   };
@@ -532,10 +534,10 @@ const DocumentComparison: React.FC = () => {
       if (confidenceFilter !== 'all' && score !== null) {
         switch (confidenceFilter) {
           case 'below_50': mc = score < 50; break;
-          case '50_75':    mc = score >= 50 && score < 75; break;
-          case '75_80':    mc = score >= 75 && score < 80; break;
-          case '80_85':    mc = score >= 80 && score < 85; break;
-          case '85_90':    mc = score >= 85 && score < 90; break;
+          case '50_75': mc = score >= 50 && score < 75; break;
+          case '75_80': mc = score >= 75 && score < 80; break;
+          case '80_85': mc = score >= 80 && score < 85; break;
+          case '85_90': mc = score >= 85 && score < 90; break;
           case '90_above': mc = score >= 90; break;
         }
       }
@@ -544,8 +546,8 @@ const DocumentComparison: React.FC = () => {
     });
   };
 
-  const allRows      = buildTableRows();
-  const uniquePages  = Array.from(new Set(allRows.filter(r => !r.isSection && r.page !== undefined).map(r => r.page))).sort((a, b) => a - b);
+  const allRows = buildTableRows();
+  const uniquePages = Array.from(new Set(allRows.filter(r => !r.isSection && r.page !== undefined).map(r => r.page))).sort((a, b) => a - b);
   const filteredRows = getFilteredRows();
   const changedCount = Object.values(editedValues).filter(e => e.newValue !== e.originalValue).length;
 
@@ -562,48 +564,60 @@ const DocumentComparison: React.FC = () => {
   }
 
   console.log("apiResponse?.extractedData::", apiResponse?.extractedData);
-  
+
 
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <button className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors"
+        onClick={() => navigate(-1)}
+      >
+        Back
+      </button>
       <div className="px-0 py-4 flex gap-6">
-  
-      {/* Submission ID */}
-      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[180px]">
-        <p className="text-xs text-gray-500 mb-1">Submission ID</p>
-        <p className="text-sm font-medium text-gray-900">{apiResponse?.extractedData?.headerInfo?.submissionId}</p>
-      </div>
-  
-      {/* Form Name */}
-      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[220px]">
-        <p className="text-xs text-gray-500 mb-1">Form Name</p>
-        <p className="text-sm font-medium text-gray-900">
-          {apiResponse?.extractedData?.headerInfo?.documentName}
-        </p>
-      </div>
-  
-      {/* Broker Name */}
-      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[200px]">
-        <p className="text-xs text-gray-500 mb-1">Broker Name</p>
-        <p className="text-sm font-medium text-gray-900">
-        {apiResponse?.extractedData?.headerInfo?.brokerName}
-        </p>
-      </div>
-  
-      {/* Customer Name */}
-      <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[200px]">
+
+        {/* Submission ID */}
+        <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[180px]">
+          <p className="text-xs text-gray-500 mb-1">Submission ID</p>
+          <p
+            className="text-sm font-medium text-gray-900 cursor-pointer"
+            title={apiResponse?.extractedData?.headerInfo?.submissionId}
+          >
+            {apiResponse?.extractedData?.headerInfo?.submissionId
+              ?.toString()
+              .slice(0, 7)}
+          </p>
+        </div>
+
+        {/* Form Name */}
+        <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[220px]">
+          <p className="text-xs text-gray-500 mb-1">Form Name</p>
+          <p className="text-sm font-medium text-gray-900">
+            {apiResponse?.extractedData?.headerInfo?.documentName}
+          </p>
+        </div>
+
+        {/* Broker Name */}
+        <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[200px]">
+          <p className="text-xs text-gray-500 mb-1">Document Type</p>
+          <p className="text-sm font-medium text-gray-900">
+            {apiResponse?.extractedData?.headerInfo?.documentType}
+          </p>
+        </div>
+
+        {/* Customer Name */}
+        {/* <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[200px]">
         <p className="text-xs text-gray-500 mb-1">Customer Name</p>
         <p className="text-sm font-medium text-gray-900">
           {apiResponse?.extractedData?.headerInfo?.customerName}
         </p>
+      </div> */}
+
       </div>
-  
-    </div>
 
       <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-         <div className=" border-b border-gray-200 shadow-sm">
-      </div>
+        <div className=" border-b border-gray-200 shadow-sm">
+        </div>
 
         <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
           <div className="px-6 py-4 flex items-center justify-between">
@@ -624,11 +638,11 @@ const DocumentComparison: React.FC = () => {
 
             <div className="flex flex-col gap-1">
               {dataError && <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ Data: {dataError}</p>}
-              {pdfError  && <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ PDF: {pdfError}</p>}
+              {pdfError && <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">⚠️ PDF: {pdfError}</p>}
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors" 
+              <button className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
@@ -683,7 +697,7 @@ const DocumentComparison: React.FC = () => {
                         onChange={e => setZoom(Number(e.target.value))}
                         className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]" />
                       <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white">
-                        {Math.round(zoom * 100)}%
+                        {Math.round(zoom * 125)}%
                       </span>
                     </div>
                     <button onClick={() => setZoom(p => Math.min(p + 0.25, 4))} disabled={zoom >= 4}
@@ -773,20 +787,18 @@ const DocumentComparison: React.FC = () => {
                       <tr
                         key={record.key}
                         onClick={() => handleRowClick(record)}
-                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
-                          selectedField?.key === record.key
+                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${selectedField?.key === record.key
                             ? 'bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]'
                             : 'hover:bg-gray-50 border-l-4 border-l-transparent'
-                        }`}
+                          }`}
                       >
                         <td className="px-4 py-3">
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs font-medium text-gray-900">{record.field}</span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
-                              record.confidence !== null && record.confidence >= 95   ? 'bg-emerald-100' :
-                              record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
-                              record.confidence !== null                              ? 'bg-red-100' : 'bg-gray-100'
-                            }`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${record.confidence !== null && record.confidence >= 95 ? 'bg-emerald-100' :
+                                record.confidence !== null && record.confidence >= CONFIDENCE_THRESHOLD ? 'bg-amber-100' :
+                                  record.confidence !== null ? 'bg-red-100' : 'bg-gray-100'
+                              }`}>
                               {record.confidencePercent !== '-' ? `${record.confidencePercent}%` : '-'}
                             </span>
                           </div>
