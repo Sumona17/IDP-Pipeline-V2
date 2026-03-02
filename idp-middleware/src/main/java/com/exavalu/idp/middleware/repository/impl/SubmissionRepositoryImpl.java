@@ -118,6 +118,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         return responses.getOrDefault(tableName, Collections.emptyList())
                 .stream()
                 .map(this::mapToSubmissionSummary)
+                .filter(dto -> !"Pending Approval".equals(dto.getStatus()))
                 .sorted(Comparator.comparing(
                         SubmissionSummaryResponseDto::getCreatedAt
                 ).reversed())
