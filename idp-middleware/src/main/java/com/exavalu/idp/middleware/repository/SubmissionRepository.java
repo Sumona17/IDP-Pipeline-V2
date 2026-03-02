@@ -18,5 +18,5 @@ public interface SubmissionRepository {
     void updateReviewCompletedStatus(String submissionId, String documentId, String updatedBy, String updatedAt);
     void pendingForApprovalStatus(String submissionId, String documentId, String updatedBy, String updatedAt);
     void updateExtractionDataStatus(String submissionId, String documentId, String updatedBy, String updatedAt);
-    List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds,String status);
+    List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds, List<String> statuses);
 }

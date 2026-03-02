@@ -126,7 +126,8 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     }
 
     @Override
-    public List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds,String status) {
+    public List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds,
+                                                                              List<String> statuses) {
 
         if (submissionIds == null || submissionIds.isEmpty()) {
             return Collections.emptyList();
@@ -159,7 +160,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
         return responses.getOrDefault(tableName, Collections.emptyList())
                 .stream()
                 .map(this::mapToSubmissionSummary)
-                .filter(dto -> status.equals(dto.getStatus()))
+                .filter(dto -> statuses.contains(dto.getStatus()))
                 .sorted(Comparator.comparing(
                         SubmissionSummaryResponseDto::getCreatedAt
                 ).reversed())
@@ -337,7 +338,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
 
         boolean allCompleted = fileContains.stream()
                 .allMatch(file ->
-                        "Review Completed".equals(
+                        "Completed".equals(
                                 file.m().get("ingestion_status").s()
                         )
                 );

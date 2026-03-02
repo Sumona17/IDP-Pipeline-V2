@@ -37,7 +37,8 @@ public class InReviewSubmissionServiceImpl implements InReviewSubmissionService 
 
         List<String> submissionIds = inReviewRepository.fetchSubmissionIdsByUserName(userName);
 
-        return submissionRepository.fetchSubmissionsByIdsWithFilter(submissionIds,"Pending Approval");
+        return submissionRepository.fetchSubmissionsByIdsWithFilter(submissionIds,
+                                                                    List.of("Pending Approval", "Completed"));
     }
 
     @Override
