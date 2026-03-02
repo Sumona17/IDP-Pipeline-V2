@@ -16,4 +16,5 @@ public class ValidateDataRequestDto {
     private String documentId;
     private String extractedDataKey;
     private String originalFileKey;
+    private Boolean isFinalSubmit;
 }
