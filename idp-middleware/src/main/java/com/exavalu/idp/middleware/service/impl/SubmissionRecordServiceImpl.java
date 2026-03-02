@@ -84,7 +84,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
                 .workflowInstanceId(dataRequestDto.getDocumentId())
-                .nodeName(Boolean.TRUE.equals(dataRequestDto.getIsUpdated())
+                .nodeName(Boolean.TRUE.equals(dataRequestDto.getIsFinalSubmit())
                           ? "DOCUMENT_REVIEW_APPROVAL" : "DOCUMENT_REVIEW")
                 .status("IN_PROGRESS")
                 .message("Document Updated")
@@ -135,7 +135,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
                 .workflowInstanceId(dataRequestDto.getDocumentId())
-                .nodeName("DOCUMENT_REVIEW")
+                .nodeName("DOCUMENT_REVIEW_APPROVAL")
                 .status("COMPLETED")
                 .message("Document Submitted")
                 .requestPayload(objectMapper.createObjectNode())
@@ -185,9 +185,9 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
                 .workflowInstanceId(dataRequestDto.getDocumentId())
-                .nodeName("DOCUMENT_REVIEW_APPROVAL")
+                .nodeName("DOCUMENT_REVIEW")
                 .status("COMPLETED")
-                .message("Document Submitted")
+                .message("Document send for approval")
                 .requestPayload(objectMapper.createObjectNode())
                 .responsePayload(extractedNode)
                 .build();
