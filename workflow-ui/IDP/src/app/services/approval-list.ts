@@ -1,5 +1,5 @@
-import { baseUrl } from '../config/configuration';
-import apiClient from './handler';
+import { baseUrl } from "../config/configuration";
+import apiClient from "./handler";
 
 export interface MyApprovalListResponse {
   submissionId: string;
@@ -15,11 +15,13 @@ interface MyApprovalListApiResponse {
   data: MyApprovalListResponse[];
 }
 
-export const fetchMyApprovalList = async (): Promise<MyApprovalListApiResponse[]> => {
+export const fetchMyApprovalList = async (): Promise<
+  MyApprovalListResponse[]
+> => {
   const response = await apiClient.get<MyApprovalListApiResponse>(
     `${baseUrl}/api/v1/inreviewsubmissions/myApprovalList`,
-    { useCustomUrl: true }
+    { useCustomUrl: true } as any,
   );
 
-  return response.data; 
+  return response.data;
 };

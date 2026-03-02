@@ -582,7 +582,7 @@ const DocumentComparison: React.FC = () => {
       });
       handleCloseConfirmModal();
       showToast("success", "Document submitted successfully.");
-      navigate(-1);
+      navigate("/dashboard");
     } catch (error) {
       handleCloseConfirmModal();
       showToast(

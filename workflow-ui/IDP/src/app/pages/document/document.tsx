@@ -158,17 +158,17 @@ export default function DocumentUploaded() {
   //     { state: { docStatus: record.status } },
   //   );
   // };
-const handleDocumentClick = (record: DocumentRow) => {
-  const baseRoute =
-    record.status === "Pending Approval"
-      ? "document-approval"
-      : "document-review";
+  const handleDocumentClick = (record: DocumentRow) => {
+    const baseRoute =
+      record.status === "Pending Approval" || record.status === "Completed"
+        ? "document-approval"
+        : "document-review";
 
-  navigate(
-    `/${baseRoute}/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`,
-    { state: { docStatus: record.status } }
-  );
-};
+    navigate(
+      `/${baseRoute}/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`,
+      { state: { docStatus: record.status } },
+    );
+  };
   const updatedColumns = documentColumns.map((col) => {
     if (col.key === "name") {
       return {

@@ -28,7 +28,11 @@ export default function ConfirmationModal({
     >
       <strong className="confirm-text">{confirmText}</strong>
 
-      <DiffTable diff={data} />
+      {data.length > 0 ? (
+        <DiffTable diff={data} />
+      ) : (
+        <h4 style={{ marginBottom: "20px" }}>No Changes</h4>
+      )}
 
       <div className="button-container">
         <button className="confirm-btn" onClick={onConfirm}>

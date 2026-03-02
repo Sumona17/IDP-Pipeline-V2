@@ -16,19 +16,19 @@ export const InstancesTable = ({
   openInstanceSteps,
 }: InstancesTableProps) => {
   const navigate = useNavigate();
-  const getWorkflowName = (instance: ExecutionInstance) => {
-    const item = instance as ExecutionInstance & {
-      workflow?: { name?: string };
-      workflowDefinition?: { name?: string };
-    };
+  // const getWorkflowName = (instance: ExecutionInstance) => {
+  //   const item = instance as ExecutionInstance & {
+  //     workflow?: { name?: string };
+  //     workflowDefinition?: { name?: string };
+  //   };
 
-    return (
-      item.workflowName ||
-      item.workflow?.name ||
-      item.workflowDefinition?.name ||
-      "-"
-    );
-  };
+  //   return (
+  //     item.workflowName ||
+  //     item.workflow?.name ||
+  //     item.workflowDefinition?.name ||
+  //     "-"
+  //   );
+  // };
   const getDuration = (instance: ExecutionInstance) => {
     const value = String(instance.durationFormatted ?? "").trim();
     const zeroLikeValues = new Set([

@@ -4,9 +4,17 @@ import "../styles/diff-table.scss";
 
 const { Panel } = Collapse;
 
-export default function DiffTable({ diff }) {
+interface DiffItem {
+  key: string;
+  section: string;
+  field: string;
+  originalValue: string;
+  newValue: string;
+}
+
+export default function DiffTable({ diff }: { diff: DiffItem[] }) {
   const groupedData = useMemo(() => {
-    return diff.reduce((acc, item) => {
+    return diff.reduce<Record<string, DiffItem[]>>((acc, item) => {
       if (!acc[item.section]) {
         acc[item.section] = [];
       }
@@ -24,7 +32,7 @@ export default function DiffTable({ diff }) {
   return (
     <div className="scrollable-div">
       <Collapse defaultActiveKey={Object.keys(groupedData)}>
-        {Object.entries(groupedData).map(([section, records]) => (
+        {Object.entries(groupedData).map(([section, sectionData]) => (
           <Panel
             header={`Section: ${section}`}
             key={section}
@@ -32,7 +40,7 @@ export default function DiffTable({ diff }) {
           >
             <Table
               columns={columns}
-              dataSource={records}
+              dataSource={sectionData}
               rowKey="key"
               size="small"
               pagination={false}
