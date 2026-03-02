@@ -87,9 +87,7 @@ export const InstancesTable = ({
                   <td className="px-6 py-2 text-sm font-medium text-gray-900">
                     {instance && instance.instanceId}
                   </td>
-                  <td className="px-6 py-2 text-sm font-medium text-gray-800">
-                    {getWorkflowName(instance)}
-                  </td>
+
                   <td className="px-6 py-2 text-center">
                     <div className="flex flex-col items-center gap-1.5">
                       {getStatusBadge(instance.status)}
@@ -111,7 +109,9 @@ export const InstancesTable = ({
                       : "-"}
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
-                    {getDuration(instance) || <span className="text-gray-400">-</span>}
+                    {getDuration(instance) || (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   {/* <td className="px-6 py-2">
                     <button

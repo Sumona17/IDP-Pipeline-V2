@@ -1,5 +1,5 @@
-import { baseUrl } from '../config/configuration';
-import apiClient from './handler';
+import { baseUrl } from "../config/configuration";
+import apiClient from "./handler";
 
 export interface ValidateDataRequest {
   submissionId: string;
@@ -50,40 +50,58 @@ export interface SubmitExtractedDataRequest {
   submissionId: string;
   documentId: string;
   extractedDataJson: Record<string, any>;
+  isFinalSubmit: boolean;
+  isUpdated: boolean;
 }
 
-export const getValidateData = async (payload: ValidateDataRequest): Promise<ValidateDataResponse> => {
+export const getValidateData = async (
+  payload: ValidateDataRequest,
+): Promise<ValidateDataResponse> => {
   const response = await apiClient.post<ValidateDataApiResponse>(
     `${baseUrl}/api/v1/submissions/getValidateData`,
     payload,
-    { useCustomUrl: true }
+    { useCustomUrl: true },
   );
   return response.data;
 };
 
-export const updateExtractedData = async ( payload: UpdateExtractedDataRequest): Promise<UpdateExtractedDataResponse> => {
-  const response = await apiClient.post<{ success: boolean; message: string; data?: Record<string, any> }>(
+export const updateExtractedData = async (
+  payload: UpdateExtractedDataRequest,
+): Promise<UpdateExtractedDataResponse> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    message: string;
+    data?: Record<string, any>;
+  }>(
     `${baseUrl}/api/v1/submissions/updateExtractedData`,
     {
-      submissionId:      payload.submissionId,
-      documentId:        payload.documentId,
+      submissionId: payload.submissionId,
+      documentId: payload.documentId,
       extractedDataJson: payload.extractedDataJson,
-      diffJson:          payload.diffJson,
+      diffJson: payload.diffJson,
     },
-    { useCustomUrl: true }
+    { useCustomUrl: true },
   );
   return response;
 };
 
-export const submitExtractedData = async ( payload: SubmitExtractedDataRequest): Promise<UpdateExtractedDataResponse> => {
-  const response = await apiClient.post<{ success: boolean; message: string; data?: Record<string, any> }>(
+export const submitExtractedData = async (
+  payload: SubmitExtractedDataRequest,
+): Promise<UpdateExtractedDataResponse> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    message: string;
+    data?: Record<string, any>;
+  }>(
     `${baseUrl}/api/v1/submissions/submitExtractedData`,
     {
-      submissionId:      payload.submissionId,
-      documentId:        payload.documentId,
+      submissionId: payload.submissionId,
+      documentId: payload.documentId,
       extractedDataJson: payload.extractedDataJson,
+      isFinalSubmit: payload.isFinalSubmit,
+      isUpdated: payload.isUpdated,
     },
-    { useCustomUrl: true }
+    { useCustomUrl: true },
   );
   return response;
 };

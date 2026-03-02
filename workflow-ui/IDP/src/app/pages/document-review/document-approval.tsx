@@ -133,7 +133,7 @@ const ToastContainer: React.FC<{
   </div>
 );
 
-const DocumentComparison: React.FC = () => {
+const DocumentApproval: React.FC = () => {
   const {
     submissionId,
     documentId,
@@ -577,7 +577,7 @@ const DocumentComparison: React.FC = () => {
         submissionId: submissionId!,
         documentId: documentId!,
         extractedDataJson: updatedData,
-        isFinalSubmit: false,
+        isFinalSubmit: true,
         isUpdated: computedDiff?.length > 0,
       });
       handleCloseConfirmModal();
@@ -1027,16 +1027,16 @@ const DocumentComparison: React.FC = () => {
               <button
                 className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("save")}
-                disabled={docStatus == "Pending Approval"}
+                //disabled={docStatus == "Pending Approval"}
               >
                 Save
               </button>
               <button
                 className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("submit")}
-                disabled={isSubmitting || docStatus == "Pending Approval"}
+                //disabled={isSubmitting || docStatus == "Pending Approval"}
               >
-                Send for Approval
+                Submit
                 {/* {changedCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-[#3C20F6] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                     {changedCount}
@@ -1394,4 +1394,4 @@ const DocumentComparison: React.FC = () => {
   );
 };
 
-export default DocumentComparison;
+export default DocumentApproval;

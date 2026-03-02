@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Table, Button, message, Progress } from "antd";
 import { EyeOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
-import { getSubmissionDocuments, type SubmissionDocument } from "../../services/document-list-service";
+import {
+  getSubmissionDocuments,
+  type SubmissionDocument,
+} from "../../services/document-list-service";
 import { InstanceStepsModal, type InstanceLogStep } from "./InstanceStepsModal";
 import { workflowBaseURL } from "../../config/configuration";
 import { fetchDocument } from "../../services/documnet-view-service";
@@ -57,9 +60,13 @@ export default function DocumentUploaded() {
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [selectedPdfName, setSelectedPdfName] = useState("");
 
-  const [instanceSteps, setInstanceSteps] = useState<InstanceLogStep[] | null>(null);
+  const [instanceSteps, setInstanceSteps] = useState<InstanceLogStep[] | null>(
+    null,
+  );
   const [instanceStepsLoading, setInstanceStepsLoading] = useState(false);
-  const [instanceStepsError, setInstanceStepsError] = useState<string | null>(null);
+  const [instanceStepsError, setInstanceStepsError] = useState<string | null>(
+    null,
+  );
   const [showInstanceStepsModal, setShowInstanceStepsModal] = useState(false);
   const [activeInstanceId, setActiveInstanceId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -96,15 +103,22 @@ export default function DocumentUploaded() {
     try {
       message.loading({ content: "Downloading file...", key: "download" });
       const encodedPdfData = await fetchDocument(fileKey);
-      const bytes = Uint8Array.from(atob(encodedPdfData), (c) => c.charCodeAt(0));
-      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
+      const bytes = Uint8Array.from(atob(encodedPdfData), (c) =>
+        c.charCodeAt(0),
+      );
+      const blob = new Blob([bytes.buffer as ArrayBuffer], {
+        type: "application/pdf",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
-      message.success({ content: "File downloaded successfully", key: "download" });
+      message.success({
+        content: "File downloaded successfully",
+        key: "download",
+      });
     } catch (err) {
       message.error({ content: "Failed to download file", key: "download" });
     }
@@ -118,11 +132,13 @@ export default function DocumentUploaded() {
     setInstanceSteps(null);
     try {
       const response = await apiClient.get<InstanceLogStep[]>(
-        `${workflowBaseURL}/logs/${instanceId}`
+        `${workflowBaseURL}/logs/${instanceId}`,
       );
       setInstanceSteps(Array.isArray(response) ? response : []);
     } catch (err) {
-      setInstanceStepsError(err instanceof Error ? err.message : "Failed to load logs");
+      setInstanceStepsError(
+        err instanceof Error ? err.message : "Failed to load logs",
+      );
       setInstanceSteps([]);
     } finally {
       setInstanceStepsLoading(false);
@@ -136,12 +152,23 @@ export default function DocumentUploaded() {
     setActiveInstanceId(null);
   };
 
-  const handleDocumentClick = (record: DocumentRow) => {
-    navigate(
-      `/document-review/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`
-    );
-  };
+  // const handleDocumentClick = (record: DocumentRow) => {
+  //   navigate(
+  //     `/document-review/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`,
+  //     { state: { docStatus: record.status } },
+  //   );
+  // };
+const handleDocumentClick = (record: DocumentRow) => {
+  const baseRoute =
+    record.status === "Pending Approval"
+      ? "document-approval"
+      : "document-review";
 
+  navigate(
+    `/${baseRoute}/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`,
+    { state: { docStatus: record.status } }
+  );
+};
   const updatedColumns = documentColumns.map((col) => {
     if (col.key === "name") {
       return {
@@ -193,7 +220,13 @@ export default function DocumentUploaded() {
               title="View Logs"
               onClick={() => handleOpenLogs(record.id)}
               icon={
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -219,15 +252,17 @@ export default function DocumentUploaded() {
             progressValue === 100
               ? "#52c41a"
               : progressValue >= 70
-              ? "#1890ff"
-              : progressValue >= 30
-              ? "#faad14"
-              : "#ff4d4f";
+                ? "#1890ff"
+                : progressValue >= 30
+                  ? "#faad14"
+                  : "#ff4d4f";
 
           return (
             <div style={{ minWidth: 100 }}>
               <div style={{ display: "flex" }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color, minWidth: 35 }}>
+                <span
+                  style={{ fontSize: 12, fontWeight: 600, color, minWidth: 35 }}
+                >
                   {progressValue}%
                 </span>
                 <Progress
@@ -240,8 +275,8 @@ export default function DocumentUploaded() {
                     progressValue === 100
                       ? "success"
                       : progressValue > 0
-                      ? "active"
-                      : undefined
+                        ? "active"
+                        : undefined
                   }
                 />
               </div>
@@ -262,7 +297,12 @@ export default function DocumentUploaded() {
           className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
           onClick={() => setDrawerOpen(true)}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

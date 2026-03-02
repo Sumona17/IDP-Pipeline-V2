@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import OpenQueue from "./open-queue/open-queue";
 import MyQueue from "./my-queue/my-queue";
+import MyApproval from "./my-approval/my-approval";
 import UploadDrawer from "../../components/file-upload/file-upload";
 
-type TabType = "open" | "my";
+type TabType = "open" | "my" |"approval";
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("open");
@@ -56,6 +57,15 @@ const Dashboard: React.FC = () => {
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("approval")}
+            className={`relative px-6 py-3 text-sm font-medium transition-colors ${activeTab === "my" ? "text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+          >
+            My Approval
+            {activeTab === "approval" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+            )}
+          </button>
         </div>
       </div>
 
@@ -68,6 +78,11 @@ const Dashboard: React.FC = () => {
         {activeTab === "my" && (
           <div className="h-full p-0">
             <MyQueue />
+          </div>
+        )}
+         {activeTab === "approval" && (
+          <div className="h-full p-0">
+            <MyApproval/>
           </div>
         )}
       </div>

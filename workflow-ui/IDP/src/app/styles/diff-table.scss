@@ -1,0 +1,72 @@
+.scrollable-div{
+    max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-bottom: 12px;
+  padding-right: 4px;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #CACACA;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #CACACA;
+  }
+  
+  scrollbar-width: thin;
+  scrollbar-color:  #f1f1f1;
+
+}
+
+
+
+  .diff-panel {
+    .ant-collapse-header {
+    display: flex !important;
+    justify-content: flex-start !important;  
+    align-items: center;
+    text-align: left !important;
+  }
+
+  .ant-collapse-header-text {
+    margin-left: 8px;   
+    text-align: left;
+  }
+    
+  .ant-collapse-title {
+    color: #3c20f6 !important;
+    font-weight: 600;
+  }
+}
+
+
+
+.diff-table {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+
+  .ant-table {
+    background: transparent !important;
+    // border: 1px solid #3c20f6;
+    // color:#3c20f6
+  }
+  .ant-table-thead > tr:first-child > th {
+    // border: 1px solid #3c20f6;
+    color:#3c20f6
+  }
+
+//     .ant-table-cell:not(:last-child) {
+//     border-right: 1px solid #3c20f6;
+//   }
+}

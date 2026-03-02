@@ -10,6 +10,7 @@ import Dashboard from "../pages/dashboard/dashboard";
 import DocumentReview from "../pages/document-review/document-review";
 import DocumentUploaded from "../pages/document/document";
 import Stepper from "../layouts/stepper";
+import DocumentApproval from "../pages/document-review/document-approval";
 
 const Login = lazy(() => import("../pages/login/login"));
 
@@ -47,6 +48,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <DocumentReview />
+          </ProtectedRoute>
+        ),
+      },
+       {
+        path: ROUTE_PATHS.DOCUMENT_APPROVAL,
+        element: (
+          <ProtectedRoute>
+            <DocumentApproval />
           </ProtectedRoute>
         ),
       },
