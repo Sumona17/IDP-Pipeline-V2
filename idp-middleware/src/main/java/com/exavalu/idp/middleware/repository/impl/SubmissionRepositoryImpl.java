@@ -387,7 +387,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                                         "file_contains[" + index + "].fileProgress = :progress, " +
                                         "file_contains[" + index + "].updatedAt = :updatedAt, " +
                                         "file_contains[" + index + "].updatedBy = :updatedBy, " +
-                                        "st = :status, " +
+                                        "#st = :status, " +
                                         "updatedAt = :updatedAt, " +
                                         "updatedBy = :updatedBy"
                         )
