@@ -24,7 +24,14 @@ interface InstanceStepsModalProps {
 
 const formatPayload = (payload: unknown): string => {
   if (payload === null || payload === undefined) return '';
-  if (typeof payload === 'string') return payload;
+  if (typeof payload === 'string') {
+    try {
+      const parsed = JSON.parse(payload);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return payload;
+    }
+  }
   try {
     return JSON.stringify(payload, null, 2);
   } catch {
@@ -51,6 +58,26 @@ interface DocumentReviewParsedPayload {
   updatedBy: string;
   updatedAt: string;
 }
+
+interface ClassifierValue {
+  description: string;
+}
+
+interface DocumentClassifierParsedPayload {
+  lob: ClassifierValue;
+  formType: ClassifierValue;
+  fileName: string;
+  documentType: string;
+}
+
+const tryParseJsonString = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+};
 
 const toDisplayValue = (value: unknown): string => {
   if (value === null || value === undefined || value === '') return '-';
@@ -111,6 +138,54 @@ const parseDocumentReviewPayload = (
     rows,
     updatedBy: toDisplayValue(data.updatedBy),
     updatedAt: formatUnixToLocaleDate(data.updatedAt),
+  };
+};
+
+const parseDocumentClassifierPayload = (
+  payload: unknown,
+): DocumentClassifierParsedPayload | null => {
+  if (!payload) return null;
+
+  const normalizedPayload = tryParseJsonString(tryParseJsonString(payload));
+
+  if (!normalizedPayload || typeof normalizedPayload !== 'object') return null;
+
+  const data = normalizedPayload as {
+    lob?: unknown;
+    form_type?: unknown;
+    formType?: unknown;
+    file_name?: unknown;
+    fileName?: unknown;
+    document_type?: unknown;
+    documentType?: unknown;
+  };
+
+  const lob = data.lob as { code?: unknown; description?: unknown } | undefined;
+  const formTypeSource = (data.form_type ?? data.formType) as
+    | { code?: unknown; description?: unknown }
+    | undefined;
+  const fileNameSource = data.file_name ?? data.fileName;
+  const documentTypeSource = data.document_type ?? data.documentType;
+
+  const hasExpectedShape =
+    lob &&
+    typeof lob === 'object' &&
+    formTypeSource &&
+    typeof formTypeSource === 'object' &&
+    fileNameSource !== undefined &&
+    documentTypeSource !== undefined;
+
+  if (!hasExpectedShape) return null;
+
+  return {
+    lob: {
+      description: toDisplayValue(lob.description),
+    },
+    formType: {
+      description: toDisplayValue(formTypeSource.description),
+    },
+    fileName: toDisplayValue(fileNameSource),
+    documentType: toDisplayValue(documentTypeSource),
   };
 };
 
@@ -188,8 +263,12 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
               {sortedSteps.map((step) => {
                 const style = getStepStatusStyle(step.status);
                 const isDocumentReview = step.nodeName === 'DOCUMENT_REVIEW';
+                const isDocumentClassifier = step.nodeName === 'DOCUMENT_CLASSIFIER';
                 const documentReviewData = isDocumentReview
                   ? parseDocumentReviewPayload(step.responsePayload)
+                  : null;
+                const documentClassifierData = isDocumentClassifier
+                  ? parseDocumentClassifierPayload(step.responsePayload)
                   : null;
                 const isRawPayloadVisible = Boolean(showRawPayloadByStep[step.id]);
                 const shouldShowResponsePayload = Boolean(step.responsePayload);
@@ -215,7 +294,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                       </div>
                       {(step.requestPayload || shouldShowResponsePayload) && (
                         <div className="mt-3 space-y-2">
-                          {step.requestPayload && (
+                          {/* {step.requestPayload && (
                             <details className="bg-white border border-gray-200 rounded-md">
                               <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
                                 Request Payload
@@ -224,11 +303,11 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                                 {formatPayload(step.requestPayload)}
                               </pre>
                             </details>
-                          )}
+                          )} */}
                           {shouldShowResponsePayload && (
                             <details className="bg-white border border-gray-200 rounded-md">
                               <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
-                                Response Payload
+                                Change Logs
                               </summary>
                               {documentReviewData ? (
                                 <div className="px-3 pb-3 pt-2 space-y-3">
@@ -297,6 +376,72 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                                           ))}
                                         </tbody>
                                       </table>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : documentClassifierData ? (
+                                <div className="px-3 pb-3 pt-2 space-y-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                      Document Classification
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setShowRawPayloadByStep((prev) => ({
+                                          ...prev,
+                                          [step.id]: !prev[step.id],
+                                        }))
+                                      }
+                                      className="text-xs font-medium px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-100"
+                                    >
+                                      {isRawPayloadVisible ? 'Show Summary' : 'Show Raw JSON'}
+                                    </button>
+                                  </div>
+                                  {isRawPayloadVisible ? (
+                                    <div className="rounded-md border border-slate-200 bg-slate-50">
+                                      <pre className="text-xs overflow-x-auto text-slate-700 px-3 py-3">
+                                        {formatPayload(step.responsePayload)}
+                                      </pre>
+                                    </div>
+                                  ) : (
+                                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
+                                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                            Line Of Business
+                                          </div>
+                                          <div className="mt-1 text-sm font-semibold text-slate-900">
+                                            {documentClassifierData.lob.description}
+                                          </div>
+                                        </div>
+                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                            Form Type
+                                          </div>
+                                          <div className="mt-1 text-sm font-semibold text-slate-900">
+                                            {documentClassifierData.formType.description}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                            File Name
+                                          </div>
+                                          <div className="mt-1 text-sm text-slate-800 break-all">
+                                            {documentClassifierData.fileName}
+                                          </div>
+                                        </div>
+                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                            Document Type
+                                          </div>
+                                          <div className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                                            {documentClassifierData.documentType}
+                                          </div>
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
