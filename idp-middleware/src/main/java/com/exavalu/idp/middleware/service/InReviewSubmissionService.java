@@ -9,4 +9,5 @@ public interface InReviewSubmissionService {
 
     List<SubmissionSummaryResponseDto> fetchMySubmissionList(String userName);
     void updateStatus(InReviewSubmissionRequestDto dto);
+    List<SubmissionSummaryResponseDto> fetchMyApprovalList(String userName);
 }

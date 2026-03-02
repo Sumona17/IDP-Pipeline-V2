@@ -11,4 +11,6 @@ public interface SubmissionRecordService {
     ValidateDataInfoResponseDto getValidateData(ValidateDataRequestDto request);
     String updateExtractedDataVersion(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);
     String updateReviewCompletedStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);
+    String pendingForApprovalStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);
+    String updateExtractionDataStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);
 }

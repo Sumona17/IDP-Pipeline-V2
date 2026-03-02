@@ -125,6 +125,47 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     }
 
     @Override
+    public List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds,String status) {
+
+        if (submissionIds == null || submissionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Map<String, AttributeValue>> keys = submissionIds.stream()
+                .map(id -> Map.of(
+                        "submissionId", AttributeValue.fromS(id)
+                ))
+                .collect(Collectors.toList());
+
+        KeysAndAttributes keysAndAttributes = KeysAndAttributes.builder()
+                .keys(keys)
+                .projectionExpression(
+                        "submissionId, createdAt, incomingPath, senderEmail, updatedAt, #st")
+                .expressionAttributeNames(Map.of(
+                        "#st", "status"
+                ))
+                .build();
+
+        BatchGetItemRequest request = BatchGetItemRequest.builder()
+                .requestItems(Map.of(
+                        tableName, keysAndAttributes
+                ))
+                .build();
+
+        Map<String, List<Map<String, AttributeValue>>> responses =
+                dynamoDbClient.batchGetItem(request).responses();
+
+        return responses.getOrDefault(tableName, Collections.emptyList())
+                .stream()
+                .map(this::mapToSubmissionSummary)
+                .filter(dto -> status.equals(dto.getStatus()))
+                .sorted(Comparator.comparing(
+                        SubmissionSummaryResponseDto::getCreatedAt
+                ).reversed())
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void updateReviewInProgress(String submissionId, String documentId) {
 
         GetItemRequest getRequest = GetItemRequest.builder()
@@ -276,7 +317,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                                         "updatedBy = :updatedBy"
                         )
                         .expressionAttributeValues(Map.of(
-                                ":status", AttributeValue.fromS("Review Completed"),
+                                ":status", AttributeValue.fromS("Completed"),
                                 ":progress", AttributeValue.fromN("100"),
                                 ":updatedAt", AttributeValue.fromN(updatedAt),
                                 ":updatedBy", AttributeValue.fromS(updatedBy)
@@ -284,9 +325,69 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                         .build());
     }
 
+    @Override
+    public void pendingForApprovalStatus(String submissionId, String documentId, String updatedBy, String updatedAt) {
 
-    private SubmissionSummaryResponseDto mapToSubmissionSummary(
-            Map<String, AttributeValue> item) {
+        SubmissionFileMetaDto meta = getFileMeta(submissionId, documentId);
+
+        int index = meta.getIndex();
+
+        dynamoDbClient.updateItem(
+                UpdateItemRequest.builder()
+                        .tableName(tableName)
+                        .key(Map.of(
+                                "submissionId",
+                                AttributeValue.fromS(submissionId)
+                        ))
+                        .updateExpression(
+                                "SET file_contains[" + index + "].ingestion_status = :status, " +
+                                        "file_contains[" + index + "].fileProgress = :progress, " +
+                                        "file_contains[" + index + "].updatedAt = :updatedAt, " +
+                                        "file_contains[" + index + "].updatedBy = :updatedBy, " +
+                                        "updatedAt = :updatedAt, " +
+                                        "updatedBy = :updatedBy"
+                        )
+                        .expressionAttributeValues(Map.of(
+                                ":status", AttributeValue.fromS("Pending Approval"),
+                                ":progress", AttributeValue.fromN("90"),
+                                ":updatedAt", AttributeValue.fromN(updatedAt),
+                                ":updatedBy", AttributeValue.fromS(updatedBy)
+                        ))
+                        .build());
+    }
+
+    public void updateExtractionDataStatus(String submissionId, String documentId, String updatedBy, String updatedAt) {
+
+        SubmissionFileMetaDto meta = getFileMeta(submissionId, documentId);
+
+        int index = meta.getIndex();
+
+        dynamoDbClient.updateItem(
+                UpdateItemRequest.builder()
+                        .tableName(tableName)
+                        .key(Map.of(
+                                "submissionId",
+                                AttributeValue.fromS(submissionId)
+                        ))
+                        .updateExpression(
+                                "SET file_contains[" + index + "].ingestion_status = :status, " +
+                                        "file_contains[" + index + "].fileProgress = :progress, " +
+                                        "file_contains[" + index + "].updatedAt = :updatedAt, " +
+                                        "file_contains[" + index + "].updatedBy = :updatedBy, " +
+                                        "updatedAt = :updatedAt, " +
+                                        "updatedBy = :updatedBy"
+                        )
+                        .expressionAttributeValues(Map.of(
+                                ":status", AttributeValue.fromS("Review in Progress"),
+                                ":progress", AttributeValue.fromN("80"),
+                                ":updatedAt", AttributeValue.fromN(updatedAt),
+                                ":updatedBy", AttributeValue.fromS(updatedBy)
+                        ))
+                        .build());
+    }
+
+
+    private SubmissionSummaryResponseDto mapToSubmissionSummary(Map<String, AttributeValue> item) {
 
         return SubmissionSummaryResponseDto.builder()
                 .submissionId(getString(item, "submissionId"))

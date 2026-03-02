@@ -78,9 +78,11 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         repository.updateExtractedDataKey(submissionId, documentId, newExtractedKey, updatedBy, updatedAt);
 
         JsonNode wrappedDiff = wrapDiffWithUpdatedBy(diffNode, updatedBy, updatedAt);
+
         WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
                 .workflowInstanceId(dataRequestDto.getDocumentId())
-                .nodeName("DOCUMENT_REVIEW")
+                .nodeName(Boolean.TRUE.equals(dataRequestDto.getIsUpdated())
+                          ? "DOCUMENT_REVIEW_APPROVAL" : "DOCUMENT_REVIEW")
                 .status("IN_PROGRESS")
                 .message("Document Updated")
                 .requestPayload(extractedNode)
@@ -102,6 +104,30 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         JsonNode extractedNode = objectMapper.valueToTree(dataRequestDto.getExtractedDataJson());
 
+        if (Boolean.TRUE.equals(dataRequestDto.getIsUpdated())) {
+
+            SubmissionFileMetaDto fileMeta = repository.getFileMeta(submissionId, documentId);
+
+            String currentKey = fileMeta.getExtractedDataS3Key();
+            int newVersion = extractAndIncrementVersion(currentKey);
+
+            String basePath = submissionId + "/" + documentId + "/";
+            String versionFolder = "v" + newVersion;
+            String fileName = fileMeta.getFileName() + ".json";
+
+            String newExtractedKey = basePath + versionFolder + "/" + fileName;
+
+            s3FileService.uploadJsonToS3(newExtractedKey, extractedNode);
+
+            repository.updateExtractedDataKey(
+                    submissionId,
+                    documentId,
+                    newExtractedKey,
+                    updatedBy,
+                    updatedAt
+            );
+        }
+
         repository.updateReviewCompletedStatus(submissionId, documentId, updatedBy, updatedAt);
 
         WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
@@ -114,6 +140,79 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
                 .build();
 
         workflowLogClient.logWorkflowEvent(logRequest);
+
+        return submissionId;
+    }
+
+    @Override
+    public String pendingForApprovalStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy) {
+
+        String submissionId = dataRequestDto.getSubmissionId();
+        String documentId = dataRequestDto.getDocumentId();
+
+        String updatedAt = String.valueOf(Instant.now().getEpochSecond());
+
+        JsonNode extractedNode = objectMapper.valueToTree(dataRequestDto.getExtractedDataJson());
+
+        if (Boolean.TRUE.equals(dataRequestDto.getIsUpdated())) {
+
+            SubmissionFileMetaDto fileMeta = repository.getFileMeta(submissionId, documentId);
+
+            String currentKey = fileMeta.getExtractedDataS3Key();
+            int newVersion = extractAndIncrementVersion(currentKey);
+
+            String basePath = submissionId + "/" + documentId + "/";
+            String versionFolder = "v" + newVersion;
+            String fileName = fileMeta.getFileName() + ".json";
+
+            String newExtractedKey = basePath + versionFolder + "/" + fileName;
+
+            s3FileService.uploadJsonToS3(newExtractedKey, extractedNode);
+
+            repository.updateExtractedDataKey(
+                    submissionId,
+                    documentId,
+                    newExtractedKey,
+                    updatedBy,
+                    updatedAt
+            );
+        }
+
+        repository.pendingForApprovalStatus(submissionId, documentId, updatedBy, updatedAt);
+
+        WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
+                .workflowInstanceId(dataRequestDto.getDocumentId())
+                .nodeName("DOCUMENT_REVIEW_APPROVAL")
+                .status("COMPLETED")
+                .message("Document Submitted")
+                .requestPayload(objectMapper.createObjectNode())
+                .responsePayload(extractedNode)
+                .build();
+
+        workflowLogClient.logWorkflowEvent(logRequest);
+
+        return submissionId;
+    }
+
+    @Override
+    public String updateExtractionDataStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy) {
+        String submissionId = dataRequestDto.getSubmissionId();
+        String documentId = dataRequestDto.getDocumentId();
+
+        String updatedAt = String.valueOf(Instant.now().getEpochSecond());
+
+        repository.updateExtractionDataStatus(submissionId, documentId, updatedBy, updatedAt);
+
+//        WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
+//                .workflowInstanceId(dataRequestDto.getDocumentId())
+//                .nodeName("DOCUMENT_REVIEW")
+//                .status("COMPLETED")
+//                .message("Document Submitted")
+//                .requestPayload(objectMapper.createObjectNode())
+//                .responsePayload(objectMapper.createObjectNode())
+//                .build();
+//
+//        workflowLogClient.logWorkflowEvent(logRequest);
 
         return submissionId;
     }

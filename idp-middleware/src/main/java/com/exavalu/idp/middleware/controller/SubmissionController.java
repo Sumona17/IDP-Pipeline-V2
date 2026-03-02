@@ -67,7 +67,22 @@ public class SubmissionController {
                                                       @AuthenticationPrincipal Jwt jwt) {
 
         String userName=jwt.getClaimAsString("username");
-        service.updateReviewCompletedStatus(request,userName);
+        if(request.getIsFinalSubmit()){
+            service.updateReviewCompletedStatus(request,userName);
+        }else {
+            service.pendingForApprovalStatus(request,userName);
+        }
+
+        return ApiResponseDto.success("Data updated successfully for submissionId: "
+                + request.getSubmissionId(), "Update completed");
+    }
+
+    @PostMapping("/updateExtractionStatus")
+    public ApiResponseDto<String> updateExtractionDataStatus(@RequestBody UpdateExtractedDataRequestDto request,
+                                                             @AuthenticationPrincipal Jwt jwt) {
+
+        String userName=jwt.getClaimAsString("username");
+        service.updateExtractionDataStatus(request,userName);
 
         return ApiResponseDto.success("Data updated successfully for submissionId: "
                 + request.getSubmissionId(), "Update completed");

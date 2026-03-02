@@ -29,6 +29,16 @@ public class InReviewSubmissionController {
 
     }
 
+    @GetMapping("/myApprovalList")
+    public ApiResponseDto<List<SubmissionSummaryResponseDto>> myApprovalList(@AuthenticationPrincipal Jwt jwt) {
+
+        String username=jwt.getClaimAsString("username");
+        List<SubmissionSummaryResponseDto> records = InReviewSubmissionService.fetchMyApprovalList(username);
+
+        return ApiResponseDto.success(records, "User submissions fetched successfully");
+
+    }
+
     @PostMapping("/updateStatus")
     public ApiResponseDto<String> updateStatus(@RequestBody InReviewSubmissionRequestDto request, @AuthenticationPrincipal Jwt jwt) {
 

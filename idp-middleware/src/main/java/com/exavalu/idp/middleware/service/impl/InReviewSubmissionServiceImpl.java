@@ -33,6 +33,14 @@ public class InReviewSubmissionServiceImpl implements InReviewSubmissionService 
     }
 
     @Override
+    public List<SubmissionSummaryResponseDto> fetchMyApprovalList(String userName) {
+
+        List<String> submissionIds = inReviewRepository.fetchSubmissionIdsByUserName(userName);
+
+        return submissionRepository.fetchSubmissionsByIdsWithFilter(submissionIds,"Pending Approval");
+    }
+
+    @Override
     public void updateStatus(InReviewSubmissionRequestDto dto) {
 
         inReviewRepository.updateSubmissionStatus(dto.getSubmissionId(), STATUS, dto.getUserName(), dto.getEMail());

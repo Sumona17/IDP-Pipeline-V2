@@ -15,6 +15,8 @@ public interface SubmissionRepository {
     SubmissionFileMetaDto getFileMeta(String submissionId, String documentId);
     void updateExtractedDataKey(String submissionId, String documentId,
                                 String newKey, String updatedBy, String updatedAt);
-    void updateReviewCompletedStatus(String submissionId, String documentId,
-                                     String updatedBy, String updatedAt);
+    void updateReviewCompletedStatus(String submissionId, String documentId, String updatedBy, String updatedAt);
+    void pendingForApprovalStatus(String submissionId, String documentId, String updatedBy, String updatedAt);
+    void updateExtractionDataStatus(String submissionId, String documentId, String updatedBy, String updatedAt);
+    List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds,String status);
 }

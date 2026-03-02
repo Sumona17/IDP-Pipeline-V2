@@ -10,8 +10,10 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateExtractedDataRequestDto {
-    String submissionId;
-    String documentId;
+    private String submissionId;
+    private String documentId;
     private Map<String, Object> extractedDataJson;
     private Object diffJson;
+    private Boolean isUpdated;
+    private Boolean isFinalSubmit;
 }
