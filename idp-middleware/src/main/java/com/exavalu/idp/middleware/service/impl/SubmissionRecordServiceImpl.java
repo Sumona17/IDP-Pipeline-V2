@@ -34,8 +34,9 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
     }
 
     @Override
-    public List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId) {
-        return repository.fetchDocumentsBySubmissionId(submissionId);
+    public List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId,
+                                                                                boolean isApprovalWindow) {
+        return repository.fetchDocumentsBySubmissionId(submissionId,isApprovalWindow);
     }
 
     @Override

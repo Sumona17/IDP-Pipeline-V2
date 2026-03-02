@@ -9,7 +9,7 @@ import java.util.List;
 public interface SubmissionRepository {
 
     List<SubmissionSummaryResponseDto> fetchPendingSubmissions();
-    List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId);
+    List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId, boolean isApprovalWindow);
     List<SubmissionSummaryResponseDto> fetchSubmissionsByIds(List<String> submissionIds);
     void updateReviewInProgress(String submissionId, String documentId);
     SubmissionFileMetaDto getFileMeta(String submissionId, String documentId);

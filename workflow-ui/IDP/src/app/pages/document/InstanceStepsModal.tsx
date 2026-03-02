@@ -262,7 +262,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
             <div className="space-y-4">
               {sortedSteps.map((step) => {
                 const style = getStepStatusStyle(step.status);
-                const isDocumentReview = step.nodeName === 'DOCUMENT_REVIEW';
+                const isDocumentReview = step.nodeName === 'DOCUMENT_REVIEW' || step.nodeName === 'DOCUMENT_REVIEW_APPROVAL';
                 const isDocumentClassifier = step.nodeName === 'DOCUMENT_CLASSIFIER';
                 const documentReviewData = isDocumentReview
                   ? parseDocumentReviewPayload(step.responsePayload)

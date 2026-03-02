@@ -29,7 +29,7 @@ const Stepper: React.FC = () => {
         </ol>
         </nav>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Dcouments</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Documents</h1>
           <div className="flex gap-3">
             {/* <button
               className="

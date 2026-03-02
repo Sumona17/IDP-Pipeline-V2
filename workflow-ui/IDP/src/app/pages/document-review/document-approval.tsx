@@ -549,6 +549,7 @@ const DocumentApproval: React.FC = () => {
         documentId: documentId!,
         extractedDataJson: updatedData,
         diffJson: computedDiff,
+        isFinalSubmit: true,
       });
       handleCloseConfirmModal();
       showToast("success", "Document saved successfully.");

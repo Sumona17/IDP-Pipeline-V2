@@ -7,7 +7,7 @@ import java.util.List;
 public interface SubmissionRecordService {
 
     List<SubmissionSummaryResponseDto> fetchUsedRecords();
-    List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId);
+    List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId, boolean isApprovalWindow);
     ValidateDataInfoResponseDto getValidateData(ValidateDataRequestDto request);
     String updateExtractedDataVersion(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);
     String updateReviewCompletedStatus(UpdateExtractedDataRequestDto dataRequestDto, String updatedBy);

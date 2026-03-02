@@ -40,7 +40,7 @@ const mapToDocumentRow = (doc: SubmissionDocument): DocumentRow => ({
   name: doc.fileName,
   status: doc.status ?? "—",
   customer: "-",
-  createdAt: formatTimestamp(parseInt(doc.createdAt), true),
+  createdAt: doc?.createdAt ? formatTimestamp(parseInt(doc.createdAt), true) : "-",
   date: new Date().toLocaleDateString("en-US"),
   size: doc.fileSize,
   fileUrl: doc.originalFileKey,

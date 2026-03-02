@@ -76,7 +76,7 @@ const MyApproval: React.FC = () => {
 
   const tabs = [
     { key: "all", label: `All (${allCount})` },
-    { key: "pendingCount", label: `Approval (${pendingCount})` },
+    { key: "approval", label: `Approval (${pendingCount})` },
     // { key: "inprogress", label: `In Progress (${inProgressCount})` },
     { key: "completed", label: `Completed (${completedCount})` },
   ];
@@ -88,9 +88,9 @@ const MyApproval: React.FC = () => {
 
   const tabFilteredSubmissions = useMemo(() => {
     switch (activeTab) {
-      case "pending":
+      case "approval":
         return submissions.filter((s) =>
-          ["PENDING", "PENDINGREVIEW"].includes(normalizeStatus(s.status)),
+          ["PENDING", "PENDINGREVIEW", "PENDINGAPPROVAL"].includes(normalizeStatus(s.status)),
         );
       case "inprogress":
         return submissions.filter((s) =>
@@ -134,7 +134,7 @@ const MyApproval: React.FC = () => {
   }, [searchTerm, statusFilter, activeTab]);
 
   const handleSubmissionClick = (submissionId: string) => {
-    navigate(`/submission-details/${submissionId}`);
+    navigate(`/submission-details/${submissionId}?isApprovalWindow=true`);
   };
 
   const formatSubmissionId = (id: string) => id.slice(0, 8);

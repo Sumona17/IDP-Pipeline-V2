@@ -38,6 +38,7 @@ export interface UpdateExtractedDataRequest {
   documentId: string;
   extractedDataJson: Record<string, any>;
   diffJson: DiffEntry[];
+  isFinalSubmit?: boolean;
 }
 
 export interface UpdateExtractedDataResponse {
@@ -79,6 +80,7 @@ export const updateExtractedData = async (
       documentId: payload.documentId,
       extractedDataJson: payload.extractedDataJson,
       diffJson: payload.diffJson,
+      isFinalSubmit: payload?.isFinalSubmit
     },
     { useCustomUrl: true },
   );

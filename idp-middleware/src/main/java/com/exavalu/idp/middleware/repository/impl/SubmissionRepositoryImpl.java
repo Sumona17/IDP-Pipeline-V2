@@ -15,10 +15,7 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.exavalu.idp.middleware.utility.FileSizeUtil.formatFileSize;
@@ -64,7 +61,8 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     }
 
     @Override
-    public List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId) {
+    public List<SubmissionDocumentInfoResponseDto> fetchDocumentsBySubmissionId(String submissionId,
+                                                                                boolean isApprovalWindow) {
 
         GetItemRequest request = GetItemRequest.builder()
                 .tableName(tableName)
@@ -81,7 +79,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
             return Collections.emptyList();
         }
 
-        return mapToSubmissionFileInfoList(item.get("file_contains"));
+        return mapToSubmissionFileInfoList(item.get("file_contains"),isApprovalWindow);
     }
 
     @Override
@@ -454,8 +452,13 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                 .build();
     }
 
-    private List<SubmissionDocumentInfoResponseDto> mapToSubmissionFileInfoList(
-            AttributeValue fileContainsAttr) {
+    private List<SubmissionDocumentInfoResponseDto> mapToSubmissionFileInfoList(AttributeValue fileContainsAttr,
+                                                                                boolean isApprovalWindow) {
+
+        Set<String> approvalStatuses = Set.of(
+                "Review in Progress",
+                "Ready for Review"
+        );
 
         return fileContainsAttr.l().stream()
                 .map(attr -> {
@@ -477,6 +480,9 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                             )
                             .build();
                 })
+                .filter(dto ->
+                        !isApprovalWindow || approvalStatuses.contains(dto.getStatus())
+                )
                 .collect(Collectors.toList());
     }
 

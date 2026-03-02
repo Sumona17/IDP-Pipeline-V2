@@ -29,10 +29,13 @@ public class SubmissionController {
     }
 
     @GetMapping("/documents/{submissionId}")
-    public ApiResponseDto<List<SubmissionDocumentInfoResponseDto>> getRecordBySubmissionId(
-            @PathVariable String submissionId) {
+    public ApiResponseDto<List<SubmissionDocumentInfoResponseDto>>
+        getRecordBySubmissionId(@PathVariable String submissionId,
+                                @RequestParam(name = "isApprovalWindow", required = false, defaultValue = "false")
+                                boolean isApprovalWindow) {
 
-        List<SubmissionDocumentInfoResponseDto> record = service.fetchDocumentsBySubmissionId(submissionId);
+        List<SubmissionDocumentInfoResponseDto> record = service.fetchDocumentsBySubmissionId(submissionId,
+                                                                                              isApprovalWindow);
 
         if (record.isEmpty()) {
             throw new RecordNotFoundException(
