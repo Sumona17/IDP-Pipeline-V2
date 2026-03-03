@@ -1,6 +1,6 @@
 import React from "react";
 import ReactJson from "react-json-view";
-import { formatStepName, formatTimestamp } from "../../utils/global-sort";
+import { formatStepName } from "../../utils/global-sort";
 
 export interface InstanceLogStep {
   id: string;
@@ -480,7 +480,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                         </div>
                         <div className="mt-2 text-xs text-gray-500">
                           {step.executedAt
-                            ? formatTimestamp(parseInt(step.executedAt), true)
+                            ? new Date(step.executedAt).toLocaleString()
                             : "-"}
                         </div>
                         {(step.requestPayload || shouldShowResponsePayload) && (
