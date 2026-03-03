@@ -1405,7 +1405,6 @@ const DocumentApproval: React.FC = () => {
       <FinalConfirmModal
         visible={finalConfirmModal}
         onClose={() => setFinalConfirmModal(false)}
-        confirmText={"Final Extracted JSON"}
         onConfirm={handleFinalModalConfirm}
         data={[finalChangeLog]}
       />
