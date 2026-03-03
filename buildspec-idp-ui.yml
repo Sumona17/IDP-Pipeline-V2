@@ -24,7 +24,7 @@ phases:
     commands:
       - "set -euo pipefail"
       - "cd workflow-ui/IDP"
-      - "npm install"
+      - "npm install --legacy-peer-deps"
       - "npm run build"
       - "cd ../.."
   post_build:
