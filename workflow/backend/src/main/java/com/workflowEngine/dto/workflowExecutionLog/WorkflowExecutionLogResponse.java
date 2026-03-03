@@ -16,7 +16,7 @@ public class WorkflowExecutionLogResponse {
     private String message;
     private String requestPayload;
     private String responsePayload;
-    private String executedAt;
+    private Long executedAt;
     private String durationFormatted;
 
 

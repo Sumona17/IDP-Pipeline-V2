@@ -28,5 +28,5 @@ public class WorkflowExecutionLog {
     @Column(columnDefinition = "json")
     private String responsePayload;
 
-    private String executedAt;
+    private Long executedAt;
 }

@@ -9,6 +9,7 @@ import editIcon from "../../../../public/assets/icons/penicon.png";
 import arrowIcon from "../../../../public/assets/icons/arrowicon.png";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "../../components/confirmation-modal";
+import FinalConfirmModal from "../../components/final-confirm-modal";
 
 interface BoundingBox {
   left: number;
@@ -178,7 +179,9 @@ const DocumentApproval: React.FC = () => {
   const toastIdRef = useRef(0);
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
   const [currentSaveAction, setCurrentSaveAction] = useState(null);
+  const [finalConfirmModal, setFinalConfirmModal] = useState(false);
   const [diff, setDiff] = useState([]);
+  const [finalChangeLog, setFinalChangeLog] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -572,6 +575,7 @@ const DocumentApproval: React.FC = () => {
     console.log("diff", computedDiff);
 
     const updatedData = buildUpdatedData();
+    console.log("updatedData", updatedData);
     setIsSubmitting(true);
     try {
       await submitExtractedData({
@@ -583,7 +587,9 @@ const DocumentApproval: React.FC = () => {
       });
       handleCloseConfirmModal();
       showToast("success", "Document submitted successfully.");
-      navigate("/dashboard");
+      setFinalChangeLog(updatedData);
+      setFinalConfirmModal(true);
+      // navigate("/dashboard");
     } catch (error) {
       handleCloseConfirmModal();
       showToast(
@@ -931,6 +937,11 @@ const DocumentApproval: React.FC = () => {
   }
 
   const docStatus = location.state.docStatus ?? [];
+
+  const handleFinalModalConfirm = () => {
+    setFinalConfirmModal(false);
+    navigate("/dashboard");
+  };
 
   return (
     <>
@@ -1390,6 +1401,13 @@ const DocumentApproval: React.FC = () => {
           currentSaveAction == "save" ? handleSubmit : handleFinalSubmit
         }
         data={diff}
+      />
+      <FinalConfirmModal
+        visible={finalConfirmModal}
+        onClose={() => setFinalConfirmModal(false)}
+        confirmText={"Final Extracted JSON"}
+        onConfirm={handleFinalModalConfirm}
+        data={[finalChangeLog]}
       />
     </>
   );

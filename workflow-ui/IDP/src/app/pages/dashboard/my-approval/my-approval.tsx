@@ -80,7 +80,7 @@ const MyApproval: React.FC = () => {
 
   const tabs = [
     { key: "all", label: `All (${allCount})` },
-    { key: "approval", label: `Approval (${pendingCount})` },
+    { key: "approval", label: `Pending (${pendingCount})` },
     // { key: "inprogress", label: `In Progress (${inProgressCount})` },
     { key: "completed", label: `Completed (${completedCount})` },
   ];

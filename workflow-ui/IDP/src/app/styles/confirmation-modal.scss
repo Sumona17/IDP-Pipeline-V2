@@ -19,6 +19,36 @@
   gap: 16px;
 }
 
+.scrollable-div{
+    max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-bottom: 12px;
+  padding-right: 4px;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #CACACA;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #CACACA;
+  }
+  
+  scrollbar-width: thin;
+  scrollbar-color:  #f1f1f1;
+
+}
+
 // .confirm-btn {
 //   background-color: #3c20f6;
 //   color: #fff;

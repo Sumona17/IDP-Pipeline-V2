@@ -41,7 +41,7 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
         log.setNodeName((node.get("data").get("label").asText()));
         log.setStatus(status);
         log.setMessage(message);
-        log.setExecutedAt(String.valueOf(Instant.now().getEpochSecond()));
+        log.setExecutedAt(Instant.now().toEpochMilli());
 
         try{
 
@@ -66,7 +66,7 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
         List<WorkflowExecutionLog> logs =
                 logRepo.findByWorkflowInstanceIdOrderByExecutedAtAsc(instanceId);
 
-        Map<String,String> startTimes = new HashMap<>();
+        Map<String,Long> startTimes = new HashMap<>();
         List<WorkflowExecutionLogResponse> responseList = new ArrayList<>();
 
         WorkflowExecutionLog lastLog = logs.isEmpty() ? null : logs.get(logs.size() - 1);
@@ -113,14 +113,14 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
 
             if ("COMPLETED".equals(log.getStatus()) || "FAILED".equals(log.getStatus())) {
 
-                String startTimeStr = startTimes.get(nodeId);
+                Long startTimeStr = startTimes.get(nodeId);
 
                 if (startTimeStr != null) {
 
-                    long start = Long.parseLong(startTimeStr);
-                    long end = Long.parseLong(log.getExecutedAt());
+                    long start = startTimeStr;
+                    long end = log.getExecutedAt();
 
-                    long seconds = end - start;
+                    long seconds = (end - start)/1000;
 
                     long hours = seconds / 3600;
                     long minutes = (seconds % 3600) / 60;

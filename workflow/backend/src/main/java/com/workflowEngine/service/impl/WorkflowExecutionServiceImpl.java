@@ -117,7 +117,7 @@ public class WorkflowExecutionServiceImpl implements WorkflowExecutionService {
         }catch (Exception e) {
             throw new RuntimeException("Invalid input", e);
         }
-        log.setExecutedAt(String.valueOf(Instant.now().getEpochSecond()));
+        log.setExecutedAt(Instant.now().toEpochMilli());
 
         logRepo.save(log);
 

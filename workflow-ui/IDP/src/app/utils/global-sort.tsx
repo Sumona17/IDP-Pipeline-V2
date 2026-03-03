@@ -80,7 +80,10 @@ export function useGlobalSort<T>(data: T[]) {
   return { sortedData, SortHeader };
 }
 
-export const formatTimestamp = (timestamp: number, showTime = false): string => {
+export const formatTimestamp = (
+  timestamp: number,
+  showTime = false,
+): string => {
   const options: Intl.DateTimeFormatOptions = {
     month: "short",
     day: "numeric",
@@ -91,11 +94,21 @@ export const formatTimestamp = (timestamp: number, showTime = false): string => 
   return new Date(timestamp * 1000).toLocaleString("en-US", options);
 };
 
-  const base64ToUint8Array = (base64: string): Uint8Array => {
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  };
+export const formatStepName = (stepName) => {
+  if (!stepName) return stepName;
+
+  return stepName
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const base64ToUint8Array = (base64: string): Uint8Array => {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+};

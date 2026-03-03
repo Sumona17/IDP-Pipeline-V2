@@ -8,7 +8,9 @@ interface InstanceStepsModalProps {
   instanceSteps: InstanceStep[] | null;
   instanceStepsLoading: boolean;
   instanceStepsError: string | null;
-  setActiveInstanceMeta: (meta: { id: string; workflowId?: string } | null) => void;
+  setActiveInstanceMeta: (
+    meta: { id: string; workflowId?: string } | null,
+  ) => void;
   setInstanceSteps: (steps: InstanceStep[] | null) => void;
   setInstanceStepsError: (error: string | null) => void;
 }
@@ -114,7 +116,9 @@ export const InstanceStepsModal = ({
   setInstanceSteps,
   setInstanceStepsError,
 }: InstanceStepsModalProps) => {
-  const [showRawPayloadByStep, setShowRawPayloadByStep] = useState<Record<string, boolean>>({});
+  const [showRawPayloadByStep, setShowRawPayloadByStep] = useState<
+    Record<string, boolean>
+  >({});
 
   if (!activeInstanceMeta) {
     return null;
@@ -125,9 +129,7 @@ export const InstanceStepsModal = ({
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
         <div className="bg-white border-b p-6 flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Audit Trail
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">Audit Trail</h2>
           </div>
           <button
             onClick={() => {
@@ -165,12 +167,17 @@ export const InstanceStepsModal = ({
                   )
                   .map((step) => {
                     const style = getStepStatusStyle(step.status);
-                    const isDocumentReview = step.nodeName === "DOCUMENT_REVIEW";
+                    const isDocumentReview =
+                      step.nodeName === "DOCUMENT_REVIEW";
                     const documentReviewData = isDocumentReview
                       ? parseDocumentReviewPayload(step.responsePayload)
                       : null;
-                    const isRawPayloadVisible = Boolean(showRawPayloadByStep[step.id]);
-                    const shouldShowResponsePayload = Boolean(step.responsePayload);
+                    const isRawPayloadVisible = Boolean(
+                      showRawPayloadByStep[step.id],
+                    );
+                    const shouldShowResponsePayload = Boolean(
+                      step.responsePayload,
+                    );
                     return (
                       <div key={step.id} className="relative pl-6">
                         <div className="absolute left-2 top-2 h-full w-px bg-gray-200" />
@@ -187,7 +194,9 @@ export const InstanceStepsModal = ({
                                 {step.nodeType} · {step.nodeId}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {step.durationFormatted ? step.durationFormatted : "0s"}
+                                {step.durationFormatted
+                                  ? step.durationFormatted
+                                  : "0s"}
                               </div>
                             </div>
                             <span
@@ -202,7 +211,8 @@ export const InstanceStepsModal = ({
                           <div className="mt-2 text-xs text-gray-500">
                             {new Date(step.executedAt).toLocaleString()}
                           </div>
-                          {(step.requestPayload || shouldShowResponsePayload) && (
+                          {(step.requestPayload ||
+                            shouldShowResponsePayload) && (
                             <div className="mt-3 space-y-2">
                               {step.requestPayload && (
                                 <details className="bg-white border border-gray-200 rounded-md">
@@ -235,19 +245,25 @@ export const InstanceStepsModal = ({
                                           }
                                           className="text-xs font-medium px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-100"
                                         >
-                                          {isRawPayloadVisible ? "Show Table" : "Show Raw JSON"}
+                                          {isRawPayloadVisible
+                                            ? "Show Table"
+                                            : "Show Raw JSON"}
                                         </button>
                                       </div>
                                       <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                                         <div className="grid grid-cols-1 gap-2 text-xs text-slate-700 sm:grid-cols-2">
                                           <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-slate-600">Updated By</span>
+                                            <span className="font-semibold text-slate-600">
+                                              Updated By
+                                            </span>
                                             <span className="inline-flex items-center rounded bg-white px-2 py-1 border border-slate-200">
                                               {documentReviewData.updatedBy}
                                             </span>
                                           </div>
                                           <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-slate-600">Updated At</span>
+                                            <span className="font-semibold text-slate-600">
+                                              Updated At
+                                            </span>
                                             <span className="inline-flex items-center rounded bg-white px-2 py-1 border border-slate-200">
                                               {documentReviewData.updatedAt}
                                             </span>
@@ -257,7 +273,9 @@ export const InstanceStepsModal = ({
                                       {isRawPayloadVisible ? (
                                         <div className="rounded-md border border-slate-200 bg-slate-50">
                                           <pre className="text-xs overflow-x-auto text-slate-700 px-3 py-3">
-                                            {formatPayload(step.responsePayload)}
+                                            {formatPayload(
+                                              step.responsePayload,
+                                            )}
                                           </pre>
                                         </div>
                                       ) : (
@@ -277,22 +295,24 @@ export const InstanceStepsModal = ({
                                               </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100 bg-white">
-                                              {documentReviewData.rows.map((row, index) => (
-                                                <tr
-                                                  key={`${row.field}-${index}`}
-                                                  className="hover:bg-slate-50"
-                                                >
-                                                  <td className="px-3 py-2 text-slate-700">
-                                                    {row.field || "-"}
-                                                  </td>
-                                                  <td className="px-3 py-2 text-slate-700">
-                                                    {row.originalValue}
-                                                  </td>
-                                                  <td className="px-3 py-2 text-slate-700">
-                                                    {row.overrideValue}
-                                                  </td>
-                                                </tr>
-                                              ))}
+                                              {documentReviewData.rows.map(
+                                                (row, index) => (
+                                                  <tr
+                                                    key={`${row.field}-${index}`}
+                                                    className="hover:bg-slate-50"
+                                                  >
+                                                    <td className="px-3 py-2 text-slate-700">
+                                                      {row.field || "-"}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-slate-700">
+                                                      {row.originalValue}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-slate-700">
+                                                      {row.overrideValue}
+                                                    </td>
+                                                  </tr>
+                                                ),
+                                              )}
                                             </tbody>
                                           </table>
                                         </div>

@@ -74,22 +74,24 @@ export default function DocumentUploaded() {
   const [activeInstanceId, setActiveInstanceId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   console.log("isApprovalWindow", location.state);
+
+  const fetchDocs = async () => {
+    try {
+      setLoading(true);
+      const data = await getSubmissionDocuments(
+        submissionId,
+        location.state.isApprovalWindow,
+      );
+      setDocuments(data.map(mapToDocumentRow));
+    } catch (err) {
+      message.error("Failed to fetch documents");
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     if (!submissionId) return;
-    const fetchDocs = async () => {
-      try {
-        setLoading(true);
-        const data = await getSubmissionDocuments(
-          submissionId,
-          location.state.isApprovalWindow,
-        );
-        setDocuments(data.map(mapToDocumentRow));
-      } catch (err) {
-        message.error("Failed to fetch documents");
-      } finally {
-        setLoading(false);
-      }
-    };
+
     fetchDocs();
   }, [submissionId, drawerOpen]);
 
@@ -294,11 +296,20 @@ export default function DocumentUploaded() {
 
     return col;
   });
-
+  const handleRefresh = () => {
+    fetchDocs();
+  };
   return (
     <div className="uploaded-docs-container">
       <div className="uploaded-docs-header">
         <h2 className="page-title">Documents Uploaded</h2>
+        <button
+          onClick={handleRefresh}
+          disabled={!documents.length}
+          className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-2 rounded-full text-sm font-medium disabled:opacity-50"
+        >
+          Refresh
+        </button>
         <button
           className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
           onClick={() => setDrawerOpen(true)}
