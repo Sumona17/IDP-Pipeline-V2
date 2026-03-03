@@ -1,5 +1,6 @@
 import { XCircle } from "lucide-react";
 import { useState } from "react";
+import ReactJson from "react-json-view";
 import type { InstanceStep } from "./types";
 import { getStepStatusStyle, formatPayload } from "./utils";
 
@@ -34,6 +35,165 @@ interface DocumentReviewParsedPayload {
   updatedBy: string;
   updatedAt: string;
 }
+
+interface ClassifierValue {
+  description: string;
+}
+
+interface DocumentClassifierParsedPayload {
+  lob: ClassifierValue;
+  formType: ClassifierValue;
+  fileName: string;
+  documentType: string;
+}
+
+const tryParseJsonString = (value: unknown): unknown => {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+};
+
+const isJsonContainer = (value: unknown): value is Record<string, unknown> | unknown[] =>
+  typeof value === "object" && value !== null;
+
+const RAW_JSON_THEME = {
+  base00: "transparent", // background
+  base01: "#0f172a", // darker panel blocks
+  base02: "#1e293b", // lines/borders
+  base03: "#94a3b8", // comments/meta
+  base04: "#cbd5e1", // subtle text
+  base05: "#e2e8f0", // default text
+  base06: "#f1f5f9",
+  base07: "#ffffff",
+  base08: "#fda4af", // null / errors
+  base09: "#fdba74", // numbers
+  base0A: "#facc15", // accents
+  base0B: "#86efac", // strings
+  base0C: "#67e8f9", // booleans
+  base0D: "#7dd3fc", // keys
+  base0E: "#c4b5fd", // braces/icons
+  base0F: "#f9a8d4",
+};
+
+const JsonPayloadViewer = ({ payload }: { payload: unknown }) => {
+  const [copied, setCopied] = useState(false);
+  const [filterText, setFilterText] = useState("");
+  const formattedPayload = formatPayload(payload);
+  const normalizedPayload = tryParseJsonString(tryParseJsonString(payload));
+  const isCollapsible = isJsonContainer(normalizedPayload);
+  const normalizedFilter = filterText.trim().toLowerCase();
+
+  const filterJsonTree = (value: unknown, query: string): unknown => {
+    if (!query) return value;
+
+    if (value === null || value === undefined) return undefined;
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      const filtered = value
+        .map((item) => filterJsonTree(item, query))
+        .filter((item) => item !== undefined);
+      return filtered.length > 0 ? filtered : undefined;
+    }
+
+    if (typeof value === "object") {
+      const result: Record<string, unknown> = {};
+      Object.entries(value as Record<string, unknown>).forEach(([key, child]) => {
+        if (key.toLowerCase().includes(query)) {
+          result[key] = child;
+          return;
+        }
+        const filteredChild = filterJsonTree(child, query);
+        if (filteredChild !== undefined) {
+          result[key] = filteredChild;
+        }
+      });
+      return Object.keys(result).length > 0 ? result : undefined;
+    }
+
+    return undefined;
+  };
+
+  const filteredPayload = normalizedFilter
+    ? filterJsonTree(normalizedPayload, normalizedFilter)
+    : normalizedPayload;
+  const hasFilterMatches = filteredPayload !== undefined;
+
+  const handleCopy = async () => {
+    try {
+      if (typeof navigator === "undefined" || !navigator.clipboard) return;
+      await navigator.clipboard.writeText(formattedPayload);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Best effort copy action.
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-slate-200 overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-100 border-b border-slate-200">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+          Raw JSON
+        </span>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={filterText}
+            onChange={(event) => setFilterText(event.target.value)}
+            placeholder="Filter keys/values..."
+            className="h-7 w-40 rounded border border-slate-300 bg-white px-2 text-[11px] text-slate-700 outline-none focus:border-slate-400"
+          />
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="text-[11px] font-semibold px-2.5 py-1 rounded border border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100"
+            title="Copy full raw JSON"
+          >
+            {copied ? "Copied Full JSON" : "Copy Full JSON"}
+          </button>
+        </div>
+      </div>
+      <div className="text-xs max-h-80 overflow-auto bg-slate-950 text-slate-100 px-3 py-3 leading-relaxed">
+        {isCollapsible && hasFilterMatches ? (
+          <ReactJson
+            src={filteredPayload as Record<string, unknown>}
+            name={false}
+            collapsed={1}
+            iconStyle="triangle"
+            displayDataTypes={false}
+            displayObjectSize
+            enableClipboard={false}
+            theme={RAW_JSON_THEME}
+            style={{
+              backgroundColor: "transparent",
+              fontSize: "12px",
+              fontFamily:
+                "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace",
+              lineHeight: 1.5,
+            }}
+          />
+        ) : normalizedFilter && !hasFilterMatches ? (
+          <div className="text-[12px] text-slate-300">
+            No keys matched "{filterText}".
+          </div>
+        ) : (
+          <pre>{formattedPayload}</pre>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const toDisplayValue = (value: unknown): string => {
   if (value === null || value === undefined || value === "") return "-";
@@ -107,6 +267,54 @@ const parseDocumentReviewPayload = (
   };
 };
 
+const parseDocumentClassifierPayload = (
+  payload: unknown,
+): DocumentClassifierParsedPayload | null => {
+  if (!payload) return null;
+
+  const normalizedPayload = tryParseJsonString(tryParseJsonString(payload));
+
+  if (!normalizedPayload || typeof normalizedPayload !== "object") return null;
+
+  const data = normalizedPayload as {
+    lob?: unknown;
+    form_type?: unknown;
+    formType?: unknown;
+    file_name?: unknown;
+    fileName?: unknown;
+    document_type?: unknown;
+    documentType?: unknown;
+  };
+
+  const lob = data.lob as { code?: unknown; description?: unknown } | undefined;
+  const formTypeSource = (data.form_type ?? data.formType) as
+    | { code?: unknown; description?: unknown }
+    | undefined;
+  const fileNameSource = data.file_name ?? data.fileName;
+  const documentTypeSource = data.document_type ?? data.documentType;
+
+  const hasExpectedShape =
+    lob &&
+    typeof lob === "object" &&
+    formTypeSource &&
+    typeof formTypeSource === "object" &&
+    fileNameSource !== undefined &&
+    documentTypeSource !== undefined;
+
+  if (!hasExpectedShape) return null;
+
+  return {
+    lob: {
+      description: toDisplayValue(lob.description),
+    },
+    formType: {
+      description: toDisplayValue(formTypeSource.description),
+    },
+    fileName: toDisplayValue(fileNameSource),
+    documentType: toDisplayValue(documentTypeSource),
+  };
+};
+
 export const InstanceStepsModal = ({
   activeInstanceMeta,
   instanceSteps,
@@ -169,8 +377,12 @@ export const InstanceStepsModal = ({
                     const style = getStepStatusStyle(step.status);
                     const isDocumentReview =
                       step.nodeName === "DOCUMENT_REVIEW";
+                    const isDocumentClassifier = step.nodeName === "DOCUMENT_CLASSIFIER";
                     const documentReviewData = isDocumentReview
                       ? parseDocumentReviewPayload(step.responsePayload)
+                      : null;
+                    const documentClassifierData = isDocumentClassifier
+                      ? parseDocumentClassifierPayload(step.responsePayload)
                       : null;
                     const isRawPayloadVisible = Boolean(
                       showRawPayloadByStep[step.id],
@@ -219,9 +431,9 @@ export const InstanceStepsModal = ({
                                   <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
                                     Request Payload
                                   </summary>
-                                  <pre className="text-xs overflow-x-auto text-gray-700 px-3 pb-3">
-                                    {formatPayload(step.requestPayload)}
-                                  </pre>
+                                  <div className="px-3 pb-3">
+                                    <JsonPayloadViewer payload={step.requestPayload} />
+                                  </div>
                                 </details>
                               )}
                               {shouldShowResponsePayload && (
@@ -271,13 +483,7 @@ export const InstanceStepsModal = ({
                                         </div>
                                       </div>
                                       {isRawPayloadVisible ? (
-                                        <div className="rounded-md border border-slate-200 bg-slate-50">
-                                          <pre className="text-xs overflow-x-auto text-slate-700 px-3 py-3">
-                                            {formatPayload(
-                                              step.responsePayload,
-                                            )}
-                                          </pre>
-                                        </div>
+                                        <JsonPayloadViewer payload={step.responsePayload} />
                                       ) : (
                                         <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
                                           <table className="min-w-full divide-y divide-slate-200 text-xs">
@@ -318,10 +524,72 @@ export const InstanceStepsModal = ({
                                         </div>
                                       )}
                                     </div>
+                                  ) : documentClassifierData ? (
+                                    <div className="px-3 pb-3 pt-2 space-y-3">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                          Document Classification
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setShowRawPayloadByStep((prev) => ({
+                                              ...prev,
+                                              [step.id]: !prev[step.id],
+                                            }))
+                                          }
+                                          className="text-xs font-medium px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-100"
+                                        >
+                                          {isRawPayloadVisible ? "Show Summary" : "Show Raw JSON"}
+                                        </button>
+                                      </div>
+                                      {isRawPayloadVisible ? (
+                                        <JsonPayloadViewer payload={step.responsePayload} />
+                                      ) : (
+                                        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
+                                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                                Line Of Business
+                                              </div>
+                                              <div className="mt-1 text-sm font-semibold text-slate-900">
+                                                {documentClassifierData.lob.description}
+                                              </div>
+                                            </div>
+                                            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                                Form Type
+                                              </div>
+                                              <div className="mt-1 text-sm font-semibold text-slate-900">
+                                                {documentClassifierData.formType.description}
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                                            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                                File Name
+                                              </div>
+                                              <div className="mt-1 text-sm text-slate-800 break-all">
+                                                {documentClassifierData.fileName}
+                                              </div>
+                                            </div>
+                                            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                                Document Type
+                                              </div>
+                                              <div className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                                                {documentClassifierData.documentType}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   ) : (
-                                    <pre className="text-xs overflow-x-auto text-gray-700 px-3 pb-3">
-                                      {formatPayload(step.responsePayload)}
-                                    </pre>
+                                    <div className="px-3 pb-3">
+                                      <JsonPayloadViewer payload={step.responsePayload} />
+                                    </div>
                                   )}
                                 </details>
                               )}
