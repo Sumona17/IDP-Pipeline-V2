@@ -1,6 +1,5 @@
 import { Modal } from "antd";
 import "../styles/confirmation-modal.scss";
-import { formatPayload } from "./../../../../client/src/pages/utils";
 
 interface FinalConfirmModalProps {
   visible: boolean;
@@ -30,7 +29,7 @@ export default function FinalConfirmModal({
       <div className="scrollable-div">
         <div className="rounded-md border border-slate-200 bg-slate-50 mb-3">
           <pre className="text-xs overflow-x-auto text-slate-700 px-3 py-3">
-            {formatPayload(data?.[0])}
+            {JSON.stringify(data?.[0])}
           </pre>
         </div>
       </div>
