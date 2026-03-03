@@ -481,7 +481,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                             .build();
                 })
                 .filter(dto ->
-                        !isApprovalWindow || approvalStatuses.contains(dto.getStatus())
+                        !isApprovalWindow || !approvalStatuses.contains(dto.getStatus())
                 )
                 .collect(Collectors.toList());
     }
