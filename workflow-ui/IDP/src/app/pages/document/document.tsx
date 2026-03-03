@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Table, Button, message, Progress } from "antd";
 import { EyeOutlined, DownloadOutlined } from "@ant-design/icons";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   getSubmissionDocuments,
   type SubmissionDocument,
@@ -40,7 +40,9 @@ const mapToDocumentRow = (doc: SubmissionDocument): DocumentRow => ({
   name: doc.fileName,
   status: doc.status ?? "—",
   customer: "-",
-  createdAt: doc?.createdAt ? formatTimestamp(parseInt(doc.createdAt), true) : "-",
+  createdAt: doc?.createdAt
+    ? formatTimestamp(parseInt(doc.createdAt), true)
+    : "-",
   date: new Date().toLocaleDateString("en-US"),
   size: doc.fileSize,
   fileUrl: doc.originalFileKey,
@@ -51,6 +53,7 @@ const mapToDocumentRow = (doc: SubmissionDocument): DocumentRow => ({
 
 export default function DocumentUploaded() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { submissionId } = useParams<{ submissionId: string }>();
 
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -70,13 +73,16 @@ export default function DocumentUploaded() {
   const [showInstanceStepsModal, setShowInstanceStepsModal] = useState(false);
   const [activeInstanceId, setActiveInstanceId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
+  console.log("isApprovalWindow", location.state);
   useEffect(() => {
     if (!submissionId) return;
     const fetchDocs = async () => {
       try {
         setLoading(true);
-        const data = await getSubmissionDocuments(submissionId);
+        const data = await getSubmissionDocuments(
+          submissionId,
+          location.state.isApprovalWindow,
+        );
         setDocuments(data.map(mapToDocumentRow));
       } catch (err) {
         message.error("Failed to fetch documents");

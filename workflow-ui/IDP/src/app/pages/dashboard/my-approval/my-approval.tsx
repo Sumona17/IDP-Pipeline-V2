@@ -63,11 +63,15 @@ const MyApproval: React.FC = () => {
 
   const allCount = submissions.length;
   const pendingCount = submissions.filter((s) =>
-    ["PENDING", "PENDINGREVIEW","PENDINGAPPROVAL"].includes(normalizeStatus(s.status)),
+    ["PENDING", "PENDINGREVIEW", "PENDINGAPPROVAL"].includes(
+      normalizeStatus(s.status),
+    ),
   ).length;
 
   const inProgressCount = submissions.filter((s) =>
-    ["INREVIEW", "INPROGRESS","REVIEWINPROGRESS"].includes(normalizeStatus(s.status)),
+    ["INREVIEW", "INPROGRESS", "REVIEWINPROGRESS"].includes(
+      normalizeStatus(s.status),
+    ),
   ).length;
 
   const completedCount = submissions.filter((s) =>
@@ -90,11 +94,15 @@ const MyApproval: React.FC = () => {
     switch (activeTab) {
       case "approval":
         return submissions.filter((s) =>
-          ["PENDING", "PENDINGREVIEW", "PENDINGAPPROVAL"].includes(normalizeStatus(s.status)),
+          ["PENDING", "PENDINGREVIEW", "PENDINGAPPROVAL"].includes(
+            normalizeStatus(s.status),
+          ),
         );
       case "inprogress":
         return submissions.filter((s) =>
-          ["INREVIEW", "INPROGRESS","REVIEWINPROGRESS"].includes(normalizeStatus(s.status)),
+          ["INREVIEW", "INPROGRESS", "REVIEWINPROGRESS"].includes(
+            normalizeStatus(s.status),
+          ),
         );
       case "completed":
         return submissions.filter((s) =>
@@ -134,7 +142,10 @@ const MyApproval: React.FC = () => {
   }, [searchTerm, statusFilter, activeTab]);
 
   const handleSubmissionClick = (submissionId: string) => {
-    navigate(`/submission-details/${submissionId}?isApprovalWindow=true`);
+    console.log("hii");
+    navigate(`/submission-details/${submissionId}`, {
+      state: { isApprovalWindow: true },
+    });
   };
 
   const formatSubmissionId = (id: string) => id.slice(0, 8);
@@ -166,7 +177,9 @@ const MyApproval: React.FC = () => {
     <div className="w-full p-2">
       <div className="flex items-center justify-between w-full">
         <div>
-          <h2 className="text-[18px] font-semibold">My Approval ({allCount})</h2>
+          <h2 className="text-[18px] font-semibold">
+            My Approval ({allCount})
+          </h2>
           <p className="text-sm text-gray-500">Your assigned submissions</p>
         </div>
 
@@ -273,8 +286,12 @@ const MyApproval: React.FC = () => {
                       </span>
                     </td>
 
-                    <td className="px-3 py-3">{formatTimestamp(parseInt(sub.createdAt), true)}</td>
-                    <td className="px-3 py-3">{formatTimestamp(parseInt(sub.updatedAt), true)}</td>
+                    <td className="px-3 py-3">
+                      {formatTimestamp(parseInt(sub.createdAt), true)}
+                    </td>
+                    <td className="px-3 py-3">
+                      {formatTimestamp(parseInt(sub.updatedAt), true)}
+                    </td>
                     <td className="px-3 py-3">{sub.createdBy}</td>
                   </tr>
                 ))

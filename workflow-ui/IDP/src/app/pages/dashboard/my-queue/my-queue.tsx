@@ -66,7 +66,9 @@ const MyQueue: React.FC = () => {
   ).length;
 
   const inProgressCount = submissions.filter((s) =>
-    ["INREVIEW", "INPROGRESS","REVIEWINPROGRESS"].includes(normalizeStatus(s.status)),
+    ["INREVIEW", "INPROGRESS", "REVIEWINPROGRESS"].includes(
+      normalizeStatus(s.status),
+    ),
   ).length;
 
   const completedCount = submissions.filter((s) =>
@@ -93,7 +95,9 @@ const MyQueue: React.FC = () => {
         );
       case "inprogress":
         return submissions.filter((s) =>
-          ["INREVIEW", "INPROGRESS","REVIEWINPROGRESS"].includes(normalizeStatus(s.status)),
+          ["INREVIEW", "INPROGRESS", "REVIEWINPROGRESS"].includes(
+            normalizeStatus(s.status),
+          ),
         );
       case "completed":
         return submissions.filter((s) =>
@@ -133,7 +137,9 @@ const MyQueue: React.FC = () => {
   }, [searchTerm, statusFilter, activeTab]);
 
   const handleSubmissionClick = (submissionId: string) => {
-    navigate(`/submission-details/${submissionId}`);
+    navigate(`/submission-details/${submissionId}`, {
+      state: { isApprovalWindow: false },
+    });
   };
 
   const formatSubmissionId = (id: string) => id.slice(0, 8);
@@ -272,8 +278,12 @@ const MyQueue: React.FC = () => {
                       </span>
                     </td>
 
-                    <td className="px-3 py-3">{formatTimestamp(parseInt(sub.createdAt), true)}</td>
-                    <td className="px-3 py-3">{formatTimestamp(parseInt(sub.updatedAt), true)}</td>
+                    <td className="px-3 py-3">
+                      {formatTimestamp(parseInt(sub.createdAt), true)}
+                    </td>
+                    <td className="px-3 py-3">
+                      {formatTimestamp(parseInt(sub.updatedAt), true)}
+                    </td>
                     <td className="px-3 py-3">{sub.createdBy}</td>
                   </tr>
                 ))

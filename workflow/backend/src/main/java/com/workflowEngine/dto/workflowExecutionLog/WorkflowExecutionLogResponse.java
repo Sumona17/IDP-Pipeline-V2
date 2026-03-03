@@ -3,8 +3,6 @@ package com.workflowEngine.dto.workflowExecutionLog;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Setter
 public class WorkflowExecutionLogResponse {
@@ -18,7 +16,7 @@ public class WorkflowExecutionLogResponse {
     private String message;
     private String requestPayload;
     private String responsePayload;
-    private LocalDateTime executedAt;
+    private String executedAt;
     private String durationFormatted;
 
 

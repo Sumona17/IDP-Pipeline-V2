@@ -21,7 +21,7 @@ public class WorkflowDefinition {
     @Column(columnDefinition = "json")
     private String definitionJson;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String createdAt;
+    private String updatedAt;
 }
 

@@ -7,7 +7,7 @@ import com.workflowEngine.service.WorkflowDefinitionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,8 +30,8 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
 
         def.setVersion(request.getVersion());
         def.setDefinitionJson(request.getDefinitionJson());
-        def.setCreatedAt(LocalDateTime.now());
-        def.setUpdatedAt(LocalDateTime.now());
+        def.setCreatedAt(String.valueOf(Instant.now().getEpochSecond()));
+        def.setUpdatedAt(String.valueOf(Instant.now().getEpochSecond()));
         def.setStatus("PENDING");
 
         return repository.save(def);
@@ -85,7 +85,7 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
             existing.setVersion(request.getVersion());
         }
 
-        existing.setUpdatedAt(LocalDateTime.now());
+        existing.setUpdatedAt(String.valueOf(Instant.now().getEpochSecond()));
 
         return repository.save(existing);
 

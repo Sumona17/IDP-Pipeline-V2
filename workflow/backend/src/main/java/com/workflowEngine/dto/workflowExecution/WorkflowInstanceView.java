@@ -1,15 +1,12 @@
 package com.workflowEngine.dto.workflowExecution;
-
-import java.time.LocalDateTime;
-
 public class WorkflowInstanceView {
 
     private String instanceId;
     private String workflowId;
     private String status;
     private String currentNodeName;
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
+    private String startedAt;
+    private String completedAt;
     private String durationFormatted;
 
 
@@ -18,8 +15,8 @@ public class WorkflowInstanceView {
             String workflowId,
             String status,
             String currentNodeName,
-            LocalDateTime startedAt,
-            LocalDateTime completedAt
+            String startedAt,
+            String completedAt
     ) {
         this.instanceId = instanceId;
         this.workflowId = workflowId;
@@ -45,11 +42,11 @@ public class WorkflowInstanceView {
         return currentNodeName;
     }
 
-    public LocalDateTime getStartedAt() {
+    public String getStartedAt() {
         return startedAt;
     }
 
-    public LocalDateTime getCompletedAt() {
+    public String getCompletedAt() {
         return completedAt;
     }
 

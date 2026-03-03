@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,7 +41,7 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
         log.setNodeName((node.get("data").get("label").asText()));
         log.setStatus(status);
         log.setMessage(message);
-        log.setExecutedAt(LocalDateTime.now());
+        log.setExecutedAt(String.valueOf(Instant.now().getEpochSecond()));
 
         try{
 
@@ -66,7 +66,7 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
         List<WorkflowExecutionLog> logs =
                 logRepo.findByWorkflowInstanceIdOrderByExecutedAtAsc(instanceId);
 
-        Map<String, LocalDateTime> startTimes = new HashMap<>();
+        Map<String,String> startTimes = new HashMap<>();
         List<WorkflowExecutionLogResponse> responseList = new ArrayList<>();
 
         WorkflowExecutionLog lastLog = logs.isEmpty() ? null : logs.get(logs.size() - 1);
@@ -113,16 +113,24 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
 
             if ("COMPLETED".equals(log.getStatus()) || "FAILED".equals(log.getStatus())) {
 
-                LocalDateTime startTime = startTimes.get(nodeId);
+                String startTimeStr = startTimes.get(nodeId);
 
-                if (startTime != null) {
+                if (startTimeStr != null) {
 
-                    Duration d = Duration.between(startTime, log.getExecutedAt());
+                    long start = Long.parseLong(startTimeStr);
+                    long end = Long.parseLong(log.getExecutedAt());
+
+                    long seconds = end - start;
+
+                    long hours = seconds / 3600;
+                    long minutes = (seconds % 3600) / 60;
+                    long secs = seconds % 60;
+
 
                     dto.setDurationFormatted(
-                            (d.toHours() > 0 ? d.toHours() + "h" : "") +
-                                    (d.toMinutesPart() > 0 ? d.toMinutesPart() + "m" : "") +
-                                    d.toSecondsPart() + "s"
+                            (hours > 0 ? hours + "h" : "") +
+                                    (minutes > 0 ? minutes + "m" : "") +
+                                    secs + "s"
                     );
                 }
             }

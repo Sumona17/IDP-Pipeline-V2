@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -54,7 +55,7 @@ public class WorkflowExecutionServiceImpl implements WorkflowExecutionService {
         instance.setWorkflowId(def.getId());
         instance.setEntityId("ENTITIY-");
         instance.setStatus("IN_PROGRESS");
-        instance.setStartedAt(LocalDateTime.now());
+        instance.setStartedAt(String.valueOf(Instant.now().getEpochSecond()));
         instance.setCurrentNode(startNodeId);
         instance.setCurrentNodeStatus("PENDING");
         instance.setCurrentNodeName("Start");
@@ -116,7 +117,7 @@ public class WorkflowExecutionServiceImpl implements WorkflowExecutionService {
         }catch (Exception e) {
             throw new RuntimeException("Invalid input", e);
         }
-        log.setExecutedAt(LocalDateTime.now());
+        log.setExecutedAt(String.valueOf(Instant.now().getEpochSecond()));
 
         logRepo.save(log);
 
@@ -147,7 +148,7 @@ public class WorkflowExecutionServiceImpl implements WorkflowExecutionService {
             instance.setCurrentNodeStatus("FAILED");
             instance.setCurrentNodeName(request.getNodeName());
             instance.setStatus("FAILED");
-            instance.setCompletedAt(java.time.LocalDateTime.now());
+            instance.setCompletedAt(String.valueOf(Instant.now().getEpochSecond()));
             instanceRepo.save(instance);
             return instance;
         }
@@ -190,16 +191,21 @@ public class WorkflowExecutionServiceImpl implements WorkflowExecutionService {
 
             if (instance.getStartedAt() != null) {
 
-                LocalDateTime endTime = instance.getCompletedAt() != null
+                long start = Long.parseLong(instance.getStartedAt());
+                long end = Long.parseLong(instance.getCompletedAt() != null
                         ? instance.getCompletedAt()
-                        : LocalDateTime.now();
+                        : String.valueOf(Instant.now().getEpochSecond()));
 
-                Duration d = Duration.between(instance.getStartedAt(), endTime);
+                long seconds = end - start;
+
+                long hours = seconds / 3600;
+                long minutes = (seconds % 3600) / 60;
+                long secs = seconds % 60;
 
                 instance.setDurationFormatted(
-                        (d.toHours() > 0 ? d.toHours() + "h" : "") +
-                                (d.toMinutesPart() > 0 ? d.toMinutesPart() + "m" : "") +
-                                d.toSecondsPart() + "s"
+                        (hours > 0 ? hours + "h" : "") +
+                                (minutes > 0 ? minutes + "m" : "") +
+                                secs + "s"
                 );
 
             } else {

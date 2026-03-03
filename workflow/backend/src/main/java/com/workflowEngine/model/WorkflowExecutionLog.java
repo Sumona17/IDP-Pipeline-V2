@@ -28,5 +28,5 @@ public class WorkflowExecutionLog {
     @Column(columnDefinition = "json")
     private String responsePayload;
 
-    private LocalDateTime executedAt;
+    private String executedAt;
 }

@@ -24,12 +24,21 @@ interface ColumnConfig {
   label: string;
 }
 
-const OpenQueue: React.FC = () => {
+interface OpenQueueProps {
+  submissions: ApiSubmission[];
+  loading: boolean;
+  refreshSubmissions: () => void;
+}
+
+const OpenQueue: React.FC<OpenQueueProps> = ({
+  submissions,
+  loading,
+  refreshSubmissions,
+}) => {
   const navigate = useNavigate();
   const auth = useAuth();
 
   const [documents, setDocuments] = useState<QueueDocument[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const ITEMS_PER_PAGE = 5;
@@ -72,23 +81,9 @@ const OpenQueue: React.FC = () => {
     }),
     [],
   );
-
   useEffect(() => {
-    const loadSubmissions = async () => {
-      try {
-        setLoading(true);
-        const data: ApiSubmission[] = await fetchAllSubmissions();
-        setDocuments(data.map(mapSubmission));
-      } catch (error) {
-        console.error("Error fetching submissions:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSubmissions();
-  }, [mapSubmission]);
-
+    setDocuments(submissions.map(mapSubmission));
+  }, [submissions, mapSubmission]);
   const handleSubmissionClick = useCallback(
     async (submissionId: string) => {
       try {
@@ -102,13 +97,11 @@ const OpenQueue: React.FC = () => {
           eMail: email,
         });
 
-        setDocuments((prev) =>
-          prev.map((doc) =>
-            doc.id === submissionId ? { ...doc, status: "In Progress" } : doc,
-          ),
-        );
+        await refreshSubmissions();
 
-        navigate(`/submission-details/${submissionId}`);
+        navigate(`/submission-details/${submissionId}`, {
+          state: { isApprovalWindow: false },
+        });
       } catch (error) {
         console.error("Failed to update status:", error);
       }

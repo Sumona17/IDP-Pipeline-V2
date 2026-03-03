@@ -24,8 +24,8 @@ public class WorkflowInstance {
     private String currentNodeStatus;
 
 
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
+    private String startedAt;
+    private String completedAt;
 
 
 

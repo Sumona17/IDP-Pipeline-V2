@@ -1,5 +1,5 @@
-import { baseUrl } from '../config/configuration';
-import apiClient from './handler';
+import { baseUrl } from "../config/configuration";
+import apiClient from "./handler";
 
 export interface SubmissionDocument {
   documentId: string;
@@ -8,16 +8,24 @@ export interface SubmissionDocument {
   extractedDataKey: string;
   originalFileKey: string;
   fileSize: string;
-  status: string,
-  createdAt: string
-  fileProgress: string
+  status: string;
+  createdAt: string;
+  fileProgress: string;
 }
 
-
-export const getSubmissionDocuments = async (submissionId: string): Promise<SubmissionDocument[]> => {
-  const response = await apiClient.get<{ success: boolean; message: string; data: SubmissionDocument[] }>(
-    `${baseUrl}/api/v1/submissions/documents/${submissionId}`,
-    { useCustomUrl: true } as any
+export const getSubmissionDocuments = async (
+  submissionId: string,
+  isApprovalWindow = false,
+): Promise<SubmissionDocument[]> => {
+  const response = await apiClient.get<{
+    success: boolean;
+    message: string;
+    data: SubmissionDocument[];
+  }>(
+    `${baseUrl}/api/v1/submissions/documents/${submissionId}?isApprovalWindow=${isApprovalWindow}`,
+    {
+      useCustomUrl: true,
+    } as any,
   );
   return response.data;
 };

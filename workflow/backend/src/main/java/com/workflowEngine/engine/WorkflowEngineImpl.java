@@ -9,6 +9,7 @@ import com.workflowEngine.service.ApiTaskService;
 import com.workflowEngine.service.NodeLogger;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Map;
 
 @Component
@@ -89,7 +90,7 @@ public class WorkflowEngineImpl implements WorkflowEngine {
 
                             instance.setStatus("COMPLETED");
                             def.setStatus("COMPLETED");
-                            instance.setCompletedAt(java.time.LocalDateTime.now());
+                            instance.setCompletedAt(String.valueOf(Instant.now().getEpochSecond()));
                             logService.logNode(
                                     instance,
                                     currentNode,
@@ -112,7 +113,7 @@ public class WorkflowEngineImpl implements WorkflowEngine {
                 }
                 catch(Exception nodeError){
                     instance.setStatus("FAILED");
-                    instance.setCompletedAt(java.time.LocalDateTime.now());
+                    instance.setCompletedAt(String.valueOf(Instant.now().getEpochSecond()));
                     def.setStatus("FAILED");
 
                     logService.logNode(

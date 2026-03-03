@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { ExecutionInstance } from "./types";
 import { getStatusBadge } from "./utils";
+import { formatTimestamp } from "../utils/helper";
 
 interface InstancesTableProps {
   filteredExecutions: ExecutionInstance[];
@@ -29,26 +30,26 @@ export const InstancesTable = ({
   //     "-"
   //   );
   // };
-  const getDuration = (instance: ExecutionInstance) => {
-    const value = String(instance.durationFormatted ?? "").trim();
-    const zeroLikeValues = new Set([
-      "",
-      "-",
-      "0s",
-      "0 sec",
-      "0 secs",
-      "0 second",
-      "0 seconds",
-      "00:00",
-      "00:00:00",
-    ]);
+  // const getDuration = (instance: ExecutionInstance) => {
+  //   const value = String(instance.durationFormatted ?? "").trim();
+  //   const zeroLikeValues = new Set([
+  //     "",
+  //     "-",
+  //     "0s",
+  //     "0 sec",
+  //     "0 secs",
+  //     "0 second",
+  //     "0 seconds",
+  //     "00:00",
+  //     "00:00:00",
+  //   ]);
 
-    if (!instance.completedAt || zeroLikeValues.has(value.toLowerCase())) {
-      return "";
-    }
+  //   if (!instance.completedAt || zeroLikeValues.has(value.toLowerCase())) {
+  //     return "";
+  //   }
 
-    return value;
-  };
+  //   return value;
+  // };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -101,17 +102,15 @@ export const InstancesTable = ({
                     </div>
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
-                    {new Date(instance.startedAt).toLocaleString()}
+                    {formatTimestamp(parseInt(instance.startedAt), true)}
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
                     {instance.completedAt != null
-                      ? new Date(instance.completedAt).toLocaleString()
+                      ? formatTimestamp(parseInt(instance.completedAt), true)
                       : "-"}
                   </td>
                   <td className="px-6 py-2 text-sm font-medium text-gray-500">
-                    {getDuration(instance) || (
-                      <span className="text-gray-400">-</span>
-                    )}
+                    {instance.durationFormatted ?? "-"}
                   </td>
                   {/* <td className="px-6 py-2">
                     <button

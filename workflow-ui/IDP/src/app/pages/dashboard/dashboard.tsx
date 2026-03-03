@@ -1,14 +1,39 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import OpenQueue from "./open-queue/open-queue";
 import MyQueue from "./my-queue/my-queue";
 import MyApproval from "./my-approval/my-approval";
 import UploadDrawer from "../../components/file-upload/file-upload";
+import { fetchAllSubmissions } from "../../services/fetch-all-submission";
 
-type TabType = "open" | "my" |"approval";
+type TabType = "open" | "my" | "approval";
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("open");
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadSubmissions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchAllSubmissions();
+      setSubmissions(data);
+    } catch (err) {
+      console.error("Error fetching submissions:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSubmissions();
+  }, [loadSubmissions]);
+
+  const handleDrawerClose = () => {
+    setDrawerOpen(false);
+    loadSubmissions();
+  };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -72,7 +97,11 @@ const Dashboard: React.FC = () => {
       <div className="flex-1 overflow-hidden">
         {activeTab === "open" && (
           <div className="h-full p-0">
-            <OpenQueue />
+            <OpenQueue
+              submissions={submissions}
+              loading={loading}
+              refreshSubmissions={loadSubmissions}
+            />
           </div>
         )}
         {activeTab === "my" && (
@@ -80,14 +109,14 @@ const Dashboard: React.FC = () => {
             <MyQueue />
           </div>
         )}
-         {activeTab === "approval" && (
+        {activeTab === "approval" && (
           <div className="h-full p-0">
-            <MyApproval/>
+            <MyApproval />
           </div>
         )}
       </div>
 
-      <UploadDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <UploadDrawer open={drawerOpen} onClose={handleDrawerClose} />
     </div>
   );
 };
