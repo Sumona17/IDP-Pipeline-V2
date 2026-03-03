@@ -38,7 +38,7 @@ const Login: React.FC = () => {
 
       <div className="right-panel">
         <div className="login-card">
-          <h2 className="title">Access Intelligent Processing</h2>
+          <h2 className="title">Access IDP</h2>
 
           <button
             className="signin-btn mt-8 w-full"

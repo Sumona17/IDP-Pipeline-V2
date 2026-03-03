@@ -296,20 +296,15 @@ export default function DocumentUploaded() {
 
     return col;
   });
-  const handleRefresh = () => {
-    fetchDocs();
-  };
+
+  useEffect(() => {
+    setTimeout(() => fetchDocs(), 7000);
+  }, []);
   return (
     <div className="uploaded-docs-container">
       <div className="uploaded-docs-header">
         <h2 className="page-title">Documents Uploaded</h2>
-        <button
-          onClick={handleRefresh}
-          disabled={!documents.length}
-          className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-2 rounded-full text-sm font-medium disabled:opacity-50"
-        >
-          Refresh
-        </button>
+
         <button
           className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
           onClick={() => setDrawerOpen(true)}
