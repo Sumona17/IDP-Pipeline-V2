@@ -131,6 +131,25 @@ public class S3FileService {
         }
     }
 
+    public JsonNode getRawFromS3Key(String s3Key) {
+
+        try {
+            GetObjectRequest request = GetObjectRequest.builder()
+                    .bucket("idp-output-json")
+                    .key(s3Key)
+                    .build();
+
+            try (InputStream is = s3Client.getObject(request)) {
+
+                return objectMapper.readTree(is);
+
+            }
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to read JSON from S3", e);
+        }
+    }
+
     public void uploadJsonToS3(String key, JsonNode jsonNode) {
 
         s3Client.putObject(

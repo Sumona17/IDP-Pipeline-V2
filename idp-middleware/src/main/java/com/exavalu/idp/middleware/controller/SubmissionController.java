@@ -91,5 +91,12 @@ public class SubmissionController {
                 + request.getSubmissionId(), "Update completed");
     }
 
+    @PostMapping("/getDifferenceData")
+    public ApiResponseDto<ValidateSubmitDataInfoResponseDto> getDifferenceData(
+            @RequestBody ValidateDataRequestDto request) {
+
+        return ApiResponseDto.success(service.getDifferenceData(request), "Difference data fetched successfully");
+    }
+
 
 }

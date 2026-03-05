@@ -4,6 +4,7 @@ import com.exavalu.idp.middleware.dto.*;
 import com.exavalu.idp.middleware.repository.SubmissionRepository;
 import com.exavalu.idp.middleware.service.S3FileService;
 import com.exavalu.idp.middleware.service.SubmissionRecordService;
+import com.exavalu.idp.middleware.utility.JsonComparator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -219,6 +220,22 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 //        workflowLogClient.logWorkflowEvent(logRequest);
 
         return submissionId;
+    }
+
+    @Override
+    public ValidateSubmitDataInfoResponseDto getDifferenceData(ValidateDataRequestDto request) {
+
+        ValidateSubmitDataInfoResponseDto dataInfo = new ValidateSubmitDataInfoResponseDto();
+//        dataInfo.setExtractedData(s3FileService.getJsonNodeFromS3Key(request.getExtractedDataKey()));
+
+        String voPath = request.getExtractedDataKey().replaceAll("/v\\d+/", "/v0/");
+        JsonNode originalJson = s3FileService.getRawFromS3Key(voPath);
+        JsonNode updatedJson = s3FileService.getRawFromS3Key(request.getExtractedDataKey());
+
+        List<JsonDiffDto> differences = JsonComparator.compare(originalJson, updatedJson);
+        dataInfo.setDifferences(differences);
+
+        return dataInfo;
     }
 
     private JsonNode wrapDiffWithUpdatedBy(JsonNode diffNode, String updatedBy, String updatedAt) {
