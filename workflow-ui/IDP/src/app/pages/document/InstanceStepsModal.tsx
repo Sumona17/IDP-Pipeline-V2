@@ -81,6 +81,38 @@ const tryParseJsonString = (value: unknown): unknown => {
   }
 };
 
+const tryParseJsonLikeString = (value: unknown): unknown => {
+  if (typeof value !== "string") return value;
+
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+
+  const parsed = tryParseJsonString(trimmed);
+  if (parsed !== trimmed) return parsed;
+
+  const wrappedAsArray = `[${trimmed}]`;
+  const parsedArray = tryParseJsonString(wrappedAsArray);
+  if (parsedArray !== wrappedAsArray) return parsedArray;
+
+  return value;
+};
+
+const normalizeJsonPayload = (value: unknown): unknown => {
+  let normalized = value;
+
+  for (let depth = 0; depth < 6; depth += 1) {
+    if (typeof normalized !== "string") break;
+    const trimmed = normalized.trim();
+    if (!trimmed) break;
+
+    const parsed = tryParseJsonLikeString(trimmed);
+    if (parsed === normalized) break;
+    normalized = parsed;
+  }
+
+  return normalized;
+};
+
 const isJsonContainer = (
   value: unknown,
 ): value is Record<string, unknown> | unknown[] =>
@@ -88,42 +120,44 @@ const isJsonContainer = (
 
 const RAW_JSON_THEME = {
   base00: "transparent", // background
-  base01: "#0f172a", // darker panel blocks
-  base02: "#1e293b", // lines/borders
-  base03: "#94a3b8", // comments/meta
-  base04: "#cbd5e1", // subtle text
-  base05: "#e2e8f0", // default text
-  base06: "#f1f5f9",
-  base07: "#ffffff",
-  base08: "#fda4af", // null / errors
-  base09: "#fdba74", // numbers
-  base0A: "#facc15", // accents
-  base0B: "#86efac", // strings
-  base0C: "#67e8f9", // booleans
-  base0D: "#7dd3fc", // keys
-  base0E: "#c4b5fd", // braces/icons
-  base0F: "#f9a8d4",
+  base01: "#f8fafc",
+  base02: "#e2e8f0",
+  base03: "#64748b",
+  base04: "#475569",
+  base05: "#1e293b",
+  base06: "#0f172a",
+  base07: "#020617",
+  base08: "#b91c1c",
+  base09: "#b45309",
+  base0A: "#a16207",
+  base0B: "#166534",
+  base0C: "#0f766e",
+  base0D: "#1d4ed8",
+  base0E: "#6d28d9",
+  base0F: "#be185d",
 };
 
 const JsonPayloadViewer = ({ payload }: { payload: unknown }) => {
   const [copied, setCopied] = React.useState(false);
   const [filterText, setFilterText] = React.useState("");
-  const formattedPayload = formatPayload(payload);
-  const normalizedPayload = tryParseJsonString(tryParseJsonString(payload));
+  const normalizedPayload = normalizeJsonPayload(payload);
+  const formattedPayload = formatPayload(normalizedPayload);
   const isCollapsible = isJsonContainer(normalizedPayload);
   const normalizedFilter = filterText.trim().toLowerCase();
 
   const filterJsonTree = (value: unknown, query: string): unknown => {
     if (!query) return value;
 
-    if (value === null || value === undefined) return undefined;
+    if (value === null || value === undefined) {
+      return String(value).toLowerCase().includes(query) ? value : undefined;
+    }
 
     if (
       typeof value === "string" ||
       typeof value === "number" ||
       typeof value === "boolean"
     ) {
-      return undefined;
+      return String(value).toLowerCase().includes(query) ? value : undefined;
     }
 
     if (Array.isArray(value)) {
@@ -193,12 +227,12 @@ const JsonPayloadViewer = ({ payload }: { payload: unknown }) => {
           </button>
         </div>
       </div>
-      <div className="text-xs max-h-80 overflow-auto bg-slate-950 text-slate-100 px-3 py-3 leading-relaxed">
+      <div className="text-xs max-h-80 overflow-auto bg-slate-50 text-slate-800 px-3 py-3 leading-relaxed">
         {isCollapsible && hasFilterMatches ? (
           <ReactJson
             src={filteredPayload as Record<string, unknown>}
             name={false}
-            collapsed={1}
+            collapsed={false}
             iconStyle="triangle"
             displayDataTypes={false}
             displayObjectSize
@@ -213,11 +247,11 @@ const JsonPayloadViewer = ({ payload }: { payload: unknown }) => {
             }}
           />
         ) : normalizedFilter && !hasFilterMatches ? (
-          <div className="text-[12px] text-slate-300">
+          <div className="text-[12px] text-slate-500">
             No keys matched "{filterText}".
           </div>
         ) : (
-          <pre>{formattedPayload}</pre>
+          <pre className="whitespace-pre-wrap break-words">{formattedPayload}</pre>
         )}
       </div>
     </div>
@@ -483,7 +517,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                             ? new Date(step.executedAt).toLocaleString()
                             : "-"}
                         </div>
-                        {(step.requestPayload || shouldShowResponsePayload) && (
+                        {(step.requestPayload || shouldShowResponsePayload) && (step.nodeName !== 'DOCUMENT_WATCHER' && step.nodeName !== 'DOCUMENT_INGESTION') && (
                           <div className="mt-3 space-y-2">
                             {/* {step.requestPayload && (
                             <details className="bg-white border border-gray-200 rounded-md">
@@ -498,7 +532,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                             {shouldShowResponsePayload && (
                               <details className="bg-white border border-gray-200 rounded-md">
                                 <summary className="cursor-pointer text-xs font-semibold text-gray-700 px-3 py-2">
-                                  Change Logs
+                                  Output / Change Logs
                                 </summary>
                                 {documentReviewData ? (
                                   <div className="px-3 pb-3 pt-2 space-y-3">
