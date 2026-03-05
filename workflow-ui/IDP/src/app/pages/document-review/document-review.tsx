@@ -867,38 +867,70 @@ const DocumentComparison: React.FC = () => {
 
   const buildTableRows = (): TableRow[] =>
     !apiResponse ? [] : flattenData(apiResponse?.extractedData?.data);
-  const getFilteredRows = (): TableRow[] => {
-    const allRows = buildTableRows();
-    return allRows.filter((row) => {
-      if (row.isSection) return true;
-      const score = row.confidence;
-      let mc = true;
-      if (confidenceFilter !== "all" && score !== null) {
-        switch (confidenceFilter) {
-          case "below_50":
-            mc = score < 50;
-            break;
-          case "50_75":
-            mc = score >= 50 && score < 75;
-            break;
-          case "75_80":
-            mc = score >= 75 && score < 80;
-            break;
-          case "80_85":
-            mc = score >= 80 && score < 85;
-            break;
-          case "85_90":
-            mc = score >= 85 && score < 90;
-            break;
-          case "90_above":
-            mc = score >= 90;
-            break;
-        }
+ const getFilteredRows = (): TableRow[] => {
+  const allRows = buildTableRows();
+  const result: TableRow[] = [];
+
+  let currentSection: TableRow | null = null;
+  let sectionRows: TableRow[] = [];
+
+  const passesFilter = (row: TableRow) => {
+    const score = row.confidence;
+
+    let mc = true;
+    if (confidenceFilter !== "all" && score !== null) {
+      switch (confidenceFilter) {
+        case "below_50":
+          mc = score < 50;
+          break;
+        case "50_75":
+          mc = score >= 50 && score < 75;
+          break;
+        case "75_80":
+          mc = score >= 75 && score < 80;
+          break;
+        case "80_85":
+          mc = score >= 80 && score < 85;
+          break;
+        case "85_90":
+          mc = score >= 85 && score < 90;
+          break;
+        case "90_above":
+          mc = score >= 90;
+          break;
       }
-      const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
-      return mc && mp;
-    });
+    }
+
+    const mp =
+      pageFilter === "all" ? true : row.page === Number(pageFilter);
+
+    return mc && mp;
   };
+
+  const pushSectionIfValid = () => {
+    if (currentSection && sectionRows.length > 0) {
+      result.push(currentSection, ...sectionRows);
+    }
+  };
+
+  for (const row of allRows) {
+    if (row.isSection) {
+      pushSectionIfValid();
+
+      currentSection = row;
+      sectionRows = [];
+      continue;
+    }
+
+    if (passesFilter(row)) {
+      sectionRows.push(row);
+    }
+  }
+
+  pushSectionIfValid();
+
+  return result;
+};
 
   const allRows = buildTableRows();
   const uniquePages = Array.from(

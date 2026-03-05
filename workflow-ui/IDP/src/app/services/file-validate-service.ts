@@ -65,6 +65,16 @@ export const getValidateData = async (
   );
   return response.data;
 };
+export const DifferenceData = async (
+  payload: ValidateDataRequest,
+): Promise<ValidateDataResponse> => {
+  const response = await apiClient.post<ValidateDataApiResponse>(
+    `${baseUrl}/api/v1/submissions/getDifferenceData`,
+    payload,
+    { useCustomUrl: true },
+  );
+  return response.data;
+};
 
 export const updateExtractedData = async (
   payload: UpdateExtractedDataRequest,

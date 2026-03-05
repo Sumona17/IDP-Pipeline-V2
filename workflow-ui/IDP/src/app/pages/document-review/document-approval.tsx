@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import {
+  DifferenceData,
   getValidateData,
   submitExtractedData,
   updateExtractedData,
@@ -191,6 +192,8 @@ const DocumentApproval: React.FC = () => {
   const pagesContainerRef = useRef<HTMLDivElement>(null);
   const renderTasksRef = useRef<Record<number, any>>({});
   const pdfjsRef = useRef<any>(null);
+  const [activeView, setActiveView] = useState("review"); 
+   const [diffResponse, setDiffResponse] = useState<any>(null);
 
   const DPI_SCALE = 2;
   const CONFIDENCE_THRESHOLD = 70;
@@ -614,7 +617,25 @@ const DocumentApproval: React.FC = () => {
       bytes[i] = binaryString.charCodeAt(i);
     return bytes;
   };
-
+const loaddiffernce =async()=>{
+   try {
+     const data = (await DifferenceData({
+          submissionId,
+          documentId,
+          extractedDataKey,
+          originalFileKey,
+        })) as any;
+        setDiffResponse(data);
+        //setApiResponse(dummydata)
+        console.log("diff response", data);
+      } catch (error) {
+        setDataError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load extracted data",
+        );
+      }
+}
   useEffect(() => {
     const loadData = async () => {
       setIsDataLoading(true);
@@ -874,39 +895,106 @@ const DocumentApproval: React.FC = () => {
 
   const buildTableRows = (): TableRow[] =>
     !apiResponse ? [] : flattenData(apiResponse?.extractedData?.data);
-  const getFilteredRows = (): TableRow[] => {
-    const allRows = buildTableRows();
-    return allRows.filter((row) => {
-      if (row.isSection) return true;
-      const score = row.confidence;
-      let mc = true;
-      if (confidenceFilter !== "all" && score !== null) {
-        switch (confidenceFilter) {
-          case "below_50":
-            mc = score < 50;
-            break;
-          case "50_75":
-            mc = score >= 50 && score < 75;
-            break;
-          case "75_80":
-            mc = score >= 75 && score < 80;
-            break;
-          case "80_85":
-            mc = score >= 80 && score < 85;
-            break;
-          case "85_90":
-            mc = score >= 85 && score < 90;
-            break;
-          case "90_above":
-            mc = score >= 90;
-            break;
-        }
+  // const getFilteredRows = (): TableRow[] => {
+  //   const allRows = buildTableRows();
+  //   return allRows.filter((row) => {
+  //     if (row.isSection) return true;
+  //     const score = row.confidence;
+  //     let mc = true;
+  //     if (confidenceFilter !== "all" && score !== null) {
+  //       switch (confidenceFilter) {
+  //         case "below_50":
+  //           mc = score < 50;
+  //           break;
+  //         case "50_75":
+  //           mc = score >= 50 && score < 75;
+  //           break;
+  //         case "75_80":
+  //           mc = score >= 75 && score < 80;
+  //           break;
+  //         case "80_85":
+  //           mc = score >= 80 && score < 85;
+  //           break;
+  //         case "85_90":
+  //           mc = score >= 85 && score < 90;
+  //           break;
+  //         case "90_above":
+  //           mc = score >= 90;
+  //           break;
+  //       }
+  //     }
+  //     const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
+  //     return mc && mp;
+  //   });
+  // };
+const getFilteredRows = (): TableRow[] => {
+  const allRows = buildTableRows();
+  const result: TableRow[] = [];
+
+  let currentSection: TableRow | null = null;
+  let sectionRows: TableRow[] = [];
+
+  const passesFilter = (row: TableRow) => {
+    const score = row.confidence;
+
+    let mc = true;
+    if (confidenceFilter !== "all" && score !== null) {
+      switch (confidenceFilter) {
+        case "below_50":
+          mc = score < 50;
+          break;
+        case "50_75":
+          mc = score >= 50 && score < 75;
+          break;
+        case "75_80":
+          mc = score >= 75 && score < 80;
+          break;
+        case "80_85":
+          mc = score >= 80 && score < 85;
+          break;
+        case "85_90":
+          mc = score >= 85 && score < 90;
+          break;
+        case "90_above":
+          mc = score >= 90;
+          break;
       }
-      const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
-      return mc && mp;
-    });
+    }
+
+    const mp =
+      pageFilter === "all" ? true : row.page === Number(pageFilter);
+
+    return mc && mp;
   };
 
+  const pushSectionIfValid = () => {
+    if (currentSection && sectionRows.length > 0) {
+      result.push(currentSection, ...sectionRows);
+    }
+  };
+
+  for (const row of allRows) {
+    if (row.isSection) {
+      pushSectionIfValid();
+
+      currentSection = row;
+      sectionRows = [];
+      continue;
+    }
+
+    if (passesFilter(row)) {
+      sectionRows.push(row);
+    }
+  }
+
+  pushSectionIfValid();
+
+  return result;
+};
+const handleAiTabClick = async () => {
+  setActiveView("ai");
+  await loaddiffernce(); 
+};
   const allRows = buildTableRows();
   const uniquePages = Array.from(
     new Set(
@@ -991,74 +1079,111 @@ const DocumentApproval: React.FC = () => {
       </div> */}
       </div>
 
-      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-        <div className=" border-b border-gray-200 shadow-sm"></div>
+     <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+  {/* Tabs */}
+  <div className="px-6 pt-3 flex items-center gap-6 border-b">
+    <button
+      onClick={() => setActiveView("review")}
+      className={`pb-2 text-sm font-medium border-b-2 ${
+        activeView === "review"
+          ? "border-[#3C20F6] text-[#3C20F6]"
+          : "border-transparent text-gray-500"
+      }`}
+    >
+      Document Review
+    </button>
 
-        <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#E6DAFF] rounded-xl">
-                <svg
-                  className="w-5 h-5 text-[#3C20F6]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-[18px] font-semibold text-gray-900">
-                  Document Review
-                </h1>
-                {/* <p className="text-xs text-gray-400 mt-0.5">
-                  {apiResponse?.extractedData?.data?.documentType ?? 'Review and validate extracted document data'}
-                </p> */}
-              </div>
-            </div>
+    <button
+      onClick={handleAiTabClick}
+      className={`pb-2 text-sm font-medium border-b-2 ${
+        activeView === "ai"
+          ? "border-[#3C20F6] text-[#3C20F6]"
+          : "border-transparent text-gray-500"
+      }`}
+    >
+      Modified Data
+    </button>
+  </div>
 
-            <div className="flex flex-col gap-1">
-              {dataError && (
-                <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                  ⚠️ Data: {dataError}
-                </p>
-              )}
-              {pdfError && (
-                <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                  ⚠️ PDF: {pdfError}
-                </p>
-              )}
-            </div>
+  {/* Header */}
+  <div className="px-6 py-4 flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-[#E6DAFF] rounded-xl">
+        {activeView === "review" ? (
+          <svg
+            className="w-5 h-5 text-[#3C20F6]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+        ) : (
+          <svg
+            className="w-5 h-5 text-[#3C20F6]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+        )}
+      </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                onClick={() => handleOpenConfirmModal("save")}
-                disabled={docStatus == "Completed"}
-              >
-                Save
-              </button>
-              <button
-                className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                onClick={() => handleOpenConfirmModal("submit")}
-                disabled={isSubmitting || docStatus == "Completed"}
-              >
-                Submit
-                {/* {changedCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-[#3C20F6] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                    {changedCount}
-                  </span>
-                )} */}
-              </button>
-            </div>
-          </div>
-        </div>
+      <div>
+        <h1 className="text-[18px] font-semibold text-gray-900">
+          {activeView === "review" ? "Document Review" : "Modified Data"}
+        </h1>
+      </div>
+    </div>
 
+    {/* Errors */}
+    <div className="flex flex-col gap-1">
+      {dataError && (
+        <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
+          ⚠️ Data: {dataError}
+        </p>
+      )}
+      {pdfError && (
+        <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
+          ⚠️ PDF: {pdfError}
+        </p>
+      )}
+    </div>
+
+    {/* Buttons */}
+    {activeView === "review" && (
+      <div className="flex items-center gap-3">
+        <button
+          className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          onClick={() => handleOpenConfirmModal("save")}
+          disabled={docStatus == "Completed"}
+        >
+          Save
+        </button>
+
+        <button
+          className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          onClick={() => handleOpenConfirmModal("submit")}
+          disabled={isSubmitting || docStatus == "Completed"}
+        >
+          Submit
+        </button>
+      </div>
+    )}
+  </div>
+</div>
+ {activeView === "review" && (
         <div className="flex flex-1 overflow-hidden gap-4 p-4">
           <div className="w-[65%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
             <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
@@ -1386,8 +1511,42 @@ const DocumentApproval: React.FC = () => {
               </table>
             </div>
           </div>
-        </div>
-      </div>
+        </div>)}
+    
+      {activeView === "ai" && (
+  <div className="p-4">
+    {diffResponse?.differences?.length ? (
+      <table className="min-w-full border border-gray-200 text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="border px-3 py-2 text-left">Page</th>
+            <th className="border px-3 py-2 text-left">Field</th>
+            <th className="border px-3 py-2 text-left">Original Value</th>
+            <th className="border px-3 py-2 text-left">Updated Value</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {diffResponse.differences.map((item: any, index: number) => (
+            <tr key={index} className="hover:bg-gray-50">
+              <td className="border px-3 py-2">{item.page}</td>
+              <td className="border px-3 py-2">{item.path}</td>
+              <td className="border px-3 py-2 text-black-500">
+                {item.originalValue}
+              </td>
+              <td className="border px-3 py-2 text-black-500">
+                {item.newValue}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <h4 className="text-gray-500">No Differences Found</h4>
+    )}
+  </div>
+)}
+    
 
       <ConfirmationModal
         visible={openConfirmModal}
