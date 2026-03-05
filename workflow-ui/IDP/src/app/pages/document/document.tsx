@@ -16,6 +16,8 @@ import { documentColumns } from "../../data/static-text";
 import PdfViewerModal from "../../components/Pdf-Viewer-Modal";
 import { formatTimestamp } from "../../utils/global-sort";
 import UploadDrawer from "../../components/file-upload/file-upload";
+import { getValidateData } from "../../services/file-validate-service";
+import FinalExtractedDataModal from "./final-extracted-data-modal";
 
 interface DocumentRow {
   key: string;
@@ -73,7 +75,12 @@ export default function DocumentUploaded() {
   const [showInstanceStepsModal, setShowInstanceStepsModal] = useState(false);
   const [activeInstanceId, setActiveInstanceId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  console.log("isApprovalWindow", location.state);
+
+  const [openFinalExtractedDataModal, setOpenFinalExtractedDataModal] =
+    useState(false);
+  const [isFinalDataLoading, setIsFinalDataLoading] = useState(true);
+  const [finalExtractedData, setFinalExtractedData] = useState(null);
+  const [finalDataError, setFinalDataError] = useState("");
 
   const isApprovalWindow = location.state?.isApprovalWindow;
 
@@ -170,7 +177,7 @@ export default function DocumentUploaded() {
   // };
   const handleDocumentClick = (record: DocumentRow) => {
     const baseRoute =
-      record.status === "Pending Approval" || record.status === "Completed"
+      record.status === "Pending Approval" || record.status === "Approved"
         ? "document-approval"
         : "document-review";
 
@@ -179,7 +186,33 @@ export default function DocumentUploaded() {
       { state: { docStatus: record.status, isApprovalWindow } },
     );
   };
-  
+
+  const handleViewFinalExtractedData = async (doc: DocumentRow) => {
+    setOpenFinalExtractedDataModal(true);
+    setIsFinalDataLoading(true);
+
+    try {
+      if (doc.status === "Approved") {
+        const data = await getValidateData({
+          submissionId: submissionId,
+          documentId: doc.id,
+          extractedDataKey: doc.extractedDataKey,
+          originalFileKey: doc.originalFileKey,
+        });
+
+        setFinalExtractedData(data.extractedData);
+        setIsFinalDataLoading(false);
+      }
+    } catch (error) {
+      setFinalDataError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load extracted data",
+      );
+    } finally {
+      setIsFinalDataLoading(false);
+    }
+  };
   const updatedColumns = documentColumns.map((col) => {
     if (col.key === "name") {
       return {
@@ -249,6 +282,17 @@ export default function DocumentUploaded() {
             >
               Logs
             </Button>
+            {record.status == "Approved" ? (
+              <Button
+                icon={<EyeOutlined />}
+                onClick={() => handleViewFinalExtractedData(record)}
+                className="doc-btn"
+              >
+                Final Extracted Data
+              </Button>
+            ) : (
+              []
+            )}
           </div>
         ),
       };
@@ -366,6 +410,13 @@ export default function DocumentUploaded() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         submissionId={submissionId}
+      />
+      <FinalExtractedDataModal
+        visible={openFinalExtractedDataModal}
+        onClose={() => setOpenFinalExtractedDataModal(false)}
+        data={[finalExtractedData]}
+        loading={isFinalDataLoading}
+        error={finalDataError}
       />
     </div>
   );

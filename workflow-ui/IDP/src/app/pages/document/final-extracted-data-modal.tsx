@@ -1,22 +1,23 @@
 import { Modal } from "antd";
-import "../styles/confirmation-modal.scss";
+import "../../styles/final-extracted-modal.scss";
 import ReactJson from "react-json-view";
-import React, { useState } from "react";
+import React from "react";
 
-interface FinalConfirmModalProps {
+interface FinalExtractedDataModal {
   visible: boolean;
   onClose: () => void;
-  onConfirm: () => void;
   data?: any[];
+  loading: boolean;
+  error: string;
 }
 
-export default function FinalConfirmModal({
+export default function FinalExtractedDataModal({
   visible,
   onClose,
-  onConfirm,
   data,
-}: FinalConfirmModalProps) {
-  const [showJson, setShowJson] = useState(false);
+  loading,
+  error,
+}: FinalExtractedDataModal) {
   const formatPayload = (payload: unknown): string => {
     if (payload === null || payload === undefined) return "";
     if (typeof payload === "string") {
@@ -160,16 +161,14 @@ export default function FinalConfirmModal({
         await navigator.clipboard.writeText(formattedPayload);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
-      } catch {
-        // Best effort copy action.
-      }
+      } catch {}
     };
 
     return (
       <div className="rounded-lg border border-slate-200 overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 bg-slate-100 border-b border-slate-200">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-            Final Updated JSON
+            Final Extracted JSON
           </span>
           <div className="flex items-center gap-2">
             <input
@@ -221,9 +220,7 @@ export default function FinalConfirmModal({
       </div>
     );
   };
-  const handleShowJson = () => {
-    setShowJson((prev) => !prev);
-  };
+
   return (
     <Modal
       open={visible}
@@ -233,26 +230,31 @@ export default function FinalConfirmModal({
       centered
       className="final-confirm-modal"
     >
-      <div
-        className="button-container"
-        // style={{ fontSize: "20px" }}
-      >
-        <strong className="confirm-text">
-          Your document has been submitted successfully. Click on the button to
-          view the final output
-        </strong>
-      </div>
-      <div className="button-container mt-2 mb-2">
-        <button className="confirm-btn" onClick={handleShowJson}>
-          {showJson ? "Hide Final JSON" : "View Final JSON"}
-        </button>
-      </div>
-      {showJson && <JsonPayloadViewer payload={data?.[0]} />}
-      {showJson && (
-        <button className="confirm-btn mt-3" onClick={onConfirm}>
-          OK
-        </button>
-      )}
+      <>
+        {error !== "" && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+        {loading == false ? (
+          <>
+            <div
+              className="button-container"
+              // style={{ fontSize: "20px" }}
+            >
+              <strong className="confirm-text">Final Extracted Data</strong>
+            </div>
+
+            <JsonPayloadViewer payload={data?.[0]?.data} />
+
+            <button className="confirm-btn mt-3" onClick={onClose}>
+              OK
+            </button>
+          </>
+        ) : (
+          "Loading final extracted data..."
+        )}
+      </>
     </Modal>
   );
 }

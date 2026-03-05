@@ -301,7 +301,6 @@ const DocumentComparison: React.FC = () => {
   //   return rows;
   // };
 
-  
   const flattenData = (apiResponse: any): TableRow[] => {
     const rows: TableRow[] = [];
 
@@ -868,70 +867,69 @@ const DocumentComparison: React.FC = () => {
 
   const buildTableRows = (): TableRow[] =>
     !apiResponse ? [] : flattenData(apiResponse?.extractedData?.data);
- const getFilteredRows = (): TableRow[] => {
-  const allRows = buildTableRows();
-  const result: TableRow[] = [];
+  const getFilteredRows = (): TableRow[] => {
+    const allRows = buildTableRows();
+    const result: TableRow[] = [];
 
-  let currentSection: TableRow | null = null;
-  let sectionRows: TableRow[] = [];
+    let currentSection: TableRow | null = null;
+    let sectionRows: TableRow[] = [];
 
-  const passesFilter = (row: TableRow) => {
-    const score = row.confidence;
+    const passesFilter = (row: TableRow) => {
+      const score = row.confidence;
 
-    let mc = true;
-    if (confidenceFilter !== "all" && score !== null) {
-      switch (confidenceFilter) {
-        case "below_50":
-          mc = score < 50;
-          break;
-        case "50_75":
-          mc = score >= 50 && score < 75;
-          break;
-        case "75_80":
-          mc = score >= 75 && score < 80;
-          break;
-        case "80_85":
-          mc = score >= 80 && score < 85;
-          break;
-        case "85_90":
-          mc = score >= 85 && score < 90;
-          break;
-        case "90_above":
-          mc = score >= 90;
-          break;
+      let mc = true;
+      if (confidenceFilter !== "all" && score !== null) {
+        switch (confidenceFilter) {
+          case "below_50":
+            mc = score < 50;
+            break;
+          case "50_75":
+            mc = score >= 50 && score < 75;
+            break;
+          case "75_80":
+            mc = score >= 75 && score < 80;
+            break;
+          case "80_85":
+            mc = score >= 80 && score < 85;
+            break;
+          case "85_90":
+            mc = score >= 85 && score < 90;
+            break;
+          case "90_above":
+            mc = score >= 90;
+            break;
+        }
+      }
+
+      const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
+
+      return mc && mp;
+    };
+
+    const pushSectionIfValid = () => {
+      if (currentSection && sectionRows.length > 0) {
+        result.push(currentSection, ...sectionRows);
+      }
+    };
+
+    for (const row of allRows) {
+      if (row.isSection) {
+        pushSectionIfValid();
+
+        currentSection = row;
+        sectionRows = [];
+        continue;
+      }
+
+      if (passesFilter(row)) {
+        sectionRows.push(row);
       }
     }
 
-    const mp =
-      pageFilter === "all" ? true : row.page === Number(pageFilter);
+    pushSectionIfValid();
 
-    return mc && mp;
+    return result;
   };
-
-  const pushSectionIfValid = () => {
-    if (currentSection && sectionRows.length > 0) {
-      result.push(currentSection, ...sectionRows);
-    }
-  };
-
-  for (const row of allRows) {
-    if (row.isSection) {
-      pushSectionIfValid();
-
-      currentSection = row;
-      sectionRows = [];
-      continue;
-    }
-
-    if (passesFilter(row)) {
-      sectionRows.push(row);
-    }
-  }
-
-  pushSectionIfValid();
-
-  return result;
-};
 
   const allRows = buildTableRows();
   const uniquePages = Array.from(
@@ -964,7 +962,7 @@ const DocumentComparison: React.FC = () => {
 
   const docStatus = location.state.docStatus ?? [];
 
-  const isDisabled = !location.state.isApprovalWindow
+  const isDisabled = !location.state.isApprovalWindow;
 
   return (
     <>
@@ -1062,14 +1060,18 @@ const DocumentComparison: React.FC = () => {
               <button
                 className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("save")}
-                disabled={docStatus == "Pending Approval" || isDisabled }
+                disabled={
+                  docStatus == "Pending Approval" || docStatus == "Approved"
+                }
               >
                 Save
               </button>
               <button
                 className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("submit")}
-                disabled={isSubmitting || docStatus == "Pending Approval" || isDisabled }
+                disabled={
+                  docStatus == "Pending Approval" || docStatus == "Approved"
+                }
               >
                 Send for Approval
                 {/* {changedCount > 0 && (
@@ -1393,7 +1395,7 @@ const DocumentComparison: React.FC = () => {
                                 setEditingField(record.key);
                               }}
                               className="ml-2 flex-shrink-0"
-                              disabled={isDisabled }
+                              disabled={isDisabled}
                             >
                               <img
                                 src={editIcon}
