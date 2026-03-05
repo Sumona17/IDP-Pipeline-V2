@@ -61,6 +61,7 @@ const MyQueue: React.FC = () => {
     status.toUpperCase().replace(/\s/g, "");
 
   const allCount = submissions.length;
+
   const pendingCount = submissions.filter((s) =>
     ["PENDING", "PENDINGREVIEW"].includes(normalizeStatus(s.status)),
   ).length;
@@ -71,15 +72,20 @@ const MyQueue: React.FC = () => {
     ),
   ).length;
 
-  const completedCount = submissions.filter((s) =>
-    ["COMPLETED"].includes(normalizeStatus(s.status)),
+  const pendingApprovalCount = submissions.filter((s) =>
+    ["PENDINGAPPROVAL"].includes(normalizeStatus(s.status)),
+  ).length;
+
+  const approvedCount = submissions.filter((s) =>
+    ["APPROVED"].includes(normalizeStatus(s.status)),
   ).length;
 
   const tabs = [
     { key: "all", label: `All (${allCount})` },
     { key: "pending", label: `Pending (${pendingCount})` },
     { key: "inprogress", label: `In Progress (${inProgressCount})` },
-    { key: "completed", label: `Completed (${completedCount})` },
+    { key: "pendingapproval", label: `Pending Approval (${pendingApprovalCount})` },
+    { key: "approved", label: `Approved (${approvedCount})` },
   ];
 
   const changeTab = (key: string) => {
@@ -99,9 +105,13 @@ const MyQueue: React.FC = () => {
             normalizeStatus(s.status),
           ),
         );
-      case "completed":
+      case "pendingapproval":
         return submissions.filter((s) =>
-          ["COMPLETED"].includes(normalizeStatus(s.status)),
+          ["PENDINGAPPROVAL"].includes(normalizeStatus(s.status)),
+        );
+      case "approved":
+        return submissions.filter((s) =>
+          ["APPROVED"].includes(normalizeStatus(s.status)),
         );
       default:
         return submissions;
@@ -152,7 +162,8 @@ const MyQueue: React.FC = () => {
       PENDINGREVIEW: "bg-yellow-100 text-yellow-800 border-yellow-200",
       INREVIEW: "bg-blue-100 text-blue-800 border-blue-200",
       INPROGRESS: "bg-blue-100 text-blue-800 border-blue-200",
-      COMPLETED: "bg-green-100 text-green-800 border-green-200",
+      PENDINGAPPROVAL: "bg-orange-100 text-orange-800 border-orange-200",
+      APPROVED: "bg-green-100 text-green-800 border-green-200",
     };
 
     return colors[normalized] || "bg-gray-100 text-gray-800 border-gray-200";
