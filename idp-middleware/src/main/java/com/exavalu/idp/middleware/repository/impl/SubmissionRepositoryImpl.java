@@ -317,7 +317,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                                         "updatedBy = :updatedBy"
                         )
                         .expressionAttributeValues(Map.of(
-                                ":status", AttributeValue.fromS("Completed"),
+                                ":status", AttributeValue.fromS("Approved"),
                                 ":progress", AttributeValue.fromN("100"),
                                 ":updatedAt", AttributeValue.fromN(updatedAt),
                                 ":updatedBy", AttributeValue.fromS(updatedBy)
@@ -336,7 +336,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
 
         boolean allCompleted = fileContains.stream()
                 .allMatch(file ->
-                        "Completed".equals(
+                        "Approved".equals(
                                 file.m().get("ingestion_status").s()
                         )
                 );
@@ -356,7 +356,7 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                                     "#st", "status"
                             ))
                             .expressionAttributeValues(Map.of(
-                                    ":status", AttributeValue.fromS("Completed"),
+                                    ":status", AttributeValue.fromS("Approved"),
                                     ":updatedAt", AttributeValue.fromN(updatedAt),
                                     ":updatedBy", AttributeValue.fromS(updatedBy)
                             ))
