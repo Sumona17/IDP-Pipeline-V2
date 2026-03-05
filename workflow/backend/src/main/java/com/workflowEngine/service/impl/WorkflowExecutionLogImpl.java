@@ -73,6 +73,14 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
 
         Map<String, List<String>> payloadHistory = new HashMap<>();
 
+        Map<String, WorkflowExecutionLog> lastInProgressLog = new HashMap<>();
+
+        for (WorkflowExecutionLog log : logs) {
+            if ("IN_PROGRESS".equalsIgnoreCase(log.getStatus())) {
+                lastInProgressLog.put(log.getNodeId(), log);
+            }
+        }
+
         for (WorkflowExecutionLog log : logs) {
 
             if ("start".equalsIgnoreCase(log.getNodeType())) {
@@ -86,6 +94,14 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
 
             if ("WAITING".equalsIgnoreCase(log.getStatus())) {
                 if (!lastNodeIsWaiting || !log.equals(lastLog)) {
+                    continue;
+                }
+            }
+
+            if ("IN_PROGRESS".equalsIgnoreCase(log.getStatus())) {
+                WorkflowExecutionLog lastInProgress = lastInProgressLog.get(log.getNodeId());
+
+                if (!log.equals(lastInProgress)) {
                     continue;
                 }
             }
