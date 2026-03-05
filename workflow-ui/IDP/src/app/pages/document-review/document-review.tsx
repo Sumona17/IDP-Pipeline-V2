@@ -301,6 +301,7 @@ const DocumentComparison: React.FC = () => {
   //   return rows;
   // };
 
+  
   const flattenData = (apiResponse: any): TableRow[] => {
     const rows: TableRow[] = [];
 
@@ -963,6 +964,8 @@ const DocumentComparison: React.FC = () => {
 
   const docStatus = location.state.docStatus ?? [];
 
+  const isDisabled = !location.state.isApprovalWindow
+
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -1059,14 +1062,14 @@ const DocumentComparison: React.FC = () => {
               <button
                 className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("save")}
-                disabled={docStatus == "Pending Approval"}
+                disabled={docStatus == "Pending Approval" || isDisabled }
               >
                 Save
               </button>
               <button
                 className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("submit")}
-                disabled={isSubmitting || docStatus == "Pending Approval"}
+                disabled={isSubmitting || docStatus == "Pending Approval" || isDisabled }
               >
                 Send for Approval
                 {/* {changedCount > 0 && (
@@ -1390,6 +1393,7 @@ const DocumentComparison: React.FC = () => {
                                 setEditingField(record.key);
                               }}
                               className="ml-2 flex-shrink-0"
+                              disabled={isDisabled }
                             >
                               <img
                                 src={editIcon}

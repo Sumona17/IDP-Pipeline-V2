@@ -75,6 +75,8 @@ export default function DocumentUploaded() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   console.log("isApprovalWindow", location.state);
 
+  const isApprovalWindow = location.state?.isApprovalWindow;
+
   const fetchDocs = async () => {
     try {
       setLoading(true);
@@ -174,9 +176,10 @@ export default function DocumentUploaded() {
 
     navigate(
       `/${baseRoute}/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`,
-      { state: { docStatus: record.status } },
+      { state: { docStatus: record.status, isApprovalWindow } },
     );
   };
+  
   const updatedColumns = documentColumns.map((col) => {
     if (col.key === "name") {
       return {
