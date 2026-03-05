@@ -71,6 +71,8 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
         boolean lastNodeIsWaiting = lastLog != null &&
                 "WAITING".equalsIgnoreCase(lastLog.getStatus());
 
+        Map<String, List<String>> payloadHistory = new HashMap<>();
+
         for (WorkflowExecutionLog log : logs) {
 
             if ("start".equalsIgnoreCase(log.getNodeType())) {
@@ -100,7 +102,19 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
             dto.setStatus(log.getStatus());
             dto.setMessage(log.getMessage());
             dto.setRequestPayload(log.getRequestPayload());
-            dto.setResponsePayload(log.getResponsePayload());
+
+            payloadHistory.putIfAbsent(nodeId, new ArrayList<>());
+
+            List<String> history = payloadHistory.get(nodeId);
+
+            if (log.getResponsePayload() != null) {
+                history.add(log.getResponsePayload());
+            }
+
+            String combinedPayload = String.join(",", history);
+
+
+            dto.setResponsePayload(combinedPayload);
             dto.setExecutedAt(log.getExecutedAt());
 
             if ("STARTED".equals(log.getStatus())) {
