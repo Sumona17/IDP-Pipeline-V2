@@ -13,10 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -141,6 +138,19 @@ public class WorkflowExecutionLogImpl implements NodeLogger {
         return responseList;
     }
 
+    @Override
+    public List<String> fetchLogByNodeName(String instanceId, String nodeName) {
 
+        List<WorkflowExecutionLog> logs =
+                logRepo.findByWorkflowInstanceIdAndNodeNameAndStatusInOrderByExecutedAtAsc(
+                        instanceId,
+                        nodeName,
+                        List.of("IN_PROGRESS", "COMPLETED")
+                );
 
+        return logs.stream()
+                .map(WorkflowExecutionLog::getResponsePayload)
+                .filter(Objects::nonNull)
+                .toList();
+    }
 }

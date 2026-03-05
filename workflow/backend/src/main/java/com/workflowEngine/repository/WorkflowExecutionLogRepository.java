@@ -12,4 +12,9 @@ public interface WorkflowExecutionLogRepository
 
 
     List<WorkflowExecutionLog> findByWorkflowInstanceIdOrderByExecutedAtAsc(String instanceId);
-}
+    List<WorkflowExecutionLog>
+    findByWorkflowInstanceIdAndNodeNameAndStatusInOrderByExecutedAtAsc(
+            String instanceId,
+            String nodeName,
+            List<String> statuses
+    );}

@@ -1,7 +1,7 @@
 import { Modal } from "antd";
 import "../styles/confirmation-modal.scss";
 import ReactJson from "react-json-view";
-import React from "react";
+import React, { useState } from "react";
 
 interface FinalConfirmModalProps {
   visible: boolean;
@@ -16,6 +16,7 @@ export default function FinalConfirmModal({
   onConfirm,
   data,
 }: FinalConfirmModalProps) {
+  const [showJson, setShowJson] = useState(false);
   const formatPayload = (payload: unknown): string => {
     if (payload === null || payload === undefined) return "";
     if (typeof payload === "string") {
@@ -185,7 +186,9 @@ export default function FinalConfirmModal({
       </div>
     );
   };
-
+  const handleShowJson = () => {
+    setShowJson((prev) => !prev);
+  };
   return (
     <Modal
       open={visible}
@@ -195,11 +198,26 @@ export default function FinalConfirmModal({
       centered
       className="final-confirm-modal"
     >
-      <JsonPayloadViewer payload={data?.[0]} />
-
-      <button className="confirm-btn mt-3" onClick={onConfirm}>
-        OK
-      </button>
+      <div
+        className="button-container"
+        // style={{ fontSize: "20px" }}
+      >
+        <strong className="confirm-text">
+          Your document has been submitted successfully. Click on the button to
+          view the final output
+        </strong>
+      </div>
+      <div className="button-container mt-2 mb-2">
+        <button className="confirm-btn" onClick={handleShowJson}>
+          {showJson ? "Hide Final JSON" : "View Final JSON"}
+        </button>
+      </div>
+      {showJson && <JsonPayloadViewer payload={data?.[0]} />}
+      {showJson && (
+        <button className="confirm-btn mt-3" onClick={onConfirm}>
+          OK
+        </button>
+      )}
     </Modal>
   );
 }

@@ -297,33 +297,40 @@ export default function DocumentUploaded() {
     return col;
   });
 
-  useEffect(() => {
-    setTimeout(() => fetchDocs(), 7000);
-  }, []);
+  const handleRefresh = () => {
+    fetchDocs();
+  };
   return (
     <div className="uploaded-docs-container">
       <div className="uploaded-docs-header">
         <h2 className="page-title">Documents Uploaded</h2>
-
-        <button
-          className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
-          onClick={() => setDrawerOpen(true)}
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="button-container">
+          <button
+            className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
+            onClick={handleRefresh}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L9 7m3-3l3 3"
-            />
-          </svg>
-          Upload Files
-        </button>
+            Refresh
+          </button>
+          <button
+            className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L9 7m3-3l3 3"
+              />
+            </svg>
+            Upload Files
+          </button>
+        </div>
       </div>
 
       <Table
