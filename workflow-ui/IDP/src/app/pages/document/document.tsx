@@ -18,6 +18,7 @@ import { formatTimestamp } from "../../utils/global-sort";
 import UploadDrawer from "../../components/file-upload/file-upload";
 import { getValidateData } from "../../services/file-validate-service";
 import FinalExtractedDataModal from "./final-extracted-data-modal";
+import { useAuth } from "react-oidc-context";
 
 interface DocumentRow {
   key: string;
@@ -54,6 +55,13 @@ const mapToDocumentRow = (doc: SubmissionDocument): DocumentRow => ({
 });
 
 export default function DocumentUploaded() {
+  const auth = useAuth();
+  const userGroups = Array.isArray(auth?.user?.profile?.["cognito:groups"])
+    ? (auth?.user?.profile?.["cognito:groups"] as string[])
+    : [];
+
+  const isReviewer = userGroups.includes("reviewer");
+  const isApprover = userGroups.includes("approver");
   const navigate = useNavigate();
   const location = useLocation();
   const { submissionId } = useParams<{ submissionId: string }>();
@@ -176,14 +184,16 @@ export default function DocumentUploaded() {
   //   );
   // };
   const handleDocumentClick = (record: DocumentRow) => {
-    const baseRoute =
-      record.status === "Pending Approval" || record.status === "Approved"
-        ? "document-approval"
-        : "document-review";
+    const baseRoute = isApprover ? "document-approval" : "document-review";
 
     navigate(
       `/${baseRoute}/${submissionId}/${encodeURIComponent(record.id)}/${encodeURIComponent(record.extractedDataKey)}/${encodeURIComponent(record.originalFileKey)}`,
-      { state: { docStatus: record.status, isApprovalWindow } },
+      {
+        state: {
+          docStatus: record.status,
+          isApprovalWindow,
+        },
+      },
     );
   };
 
@@ -358,25 +368,27 @@ export default function DocumentUploaded() {
           >
             Refresh
           </button>
-          <button
-            className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
-            onClick={() => setDrawerOpen(true)}
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {isReviewer && (
+            <button
+              className="bg-[#3C20F6] text-white px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-[#2d18c4] transition-colors"
+              onClick={() => setDrawerOpen(true)}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L9 7m3-3l3 3"
-              />
-            </svg>
-            Upload Files
-          </button>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L9 7m3-3l3 3"
+                />
+              </svg>
+              Upload Files
+            </button>
+          )}
         </div>
       </div>
 
