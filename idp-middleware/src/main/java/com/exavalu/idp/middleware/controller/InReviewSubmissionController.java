@@ -3,6 +3,7 @@ package com.exavalu.idp.middleware.controller;
 import com.exavalu.idp.middleware.dto.ApiResponseDto;
 import com.exavalu.idp.middleware.dto.InReviewSubmissionRequestDto;
 import com.exavalu.idp.middleware.dto.SubmissionSummaryResponseDto;
+import com.exavalu.idp.middleware.exception.UnauthorizedAccessException;
 import com.exavalu.idp.middleware.service.InReviewSubmissionService;
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +24,7 @@ public class InReviewSubmissionController {
     public ApiResponseDto<List<SubmissionSummaryResponseDto>> getAllRecords(@AuthenticationPrincipal Jwt jwt) {
 
         String username=jwt.getClaimAsString("username");
+
         List<SubmissionSummaryResponseDto> records = InReviewSubmissionService.fetchMySubmissionList(username);
 
         return ApiResponseDto.success(records, "User submissions fetched successfully");
@@ -33,6 +35,12 @@ public class InReviewSubmissionController {
     public ApiResponseDto<List<SubmissionSummaryResponseDto>> myApprovalList(@AuthenticationPrincipal Jwt jwt) {
 
         String username=jwt.getClaimAsString("username");
+        List<String> groups = jwt.getClaimAsStringList("cognito:groups");
+
+        if (groups == null || !groups.contains("approver")) {
+            throw new UnauthorizedAccessException("User is not authorized to access approval list");
+        }
+
         List<SubmissionSummaryResponseDto> records = InReviewSubmissionService.fetchMyApprovalList(username);
 
         return ApiResponseDto.success(records, "User submissions fetched successfully");

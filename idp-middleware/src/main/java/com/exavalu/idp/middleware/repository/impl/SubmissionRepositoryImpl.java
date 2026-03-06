@@ -124,46 +124,88 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
     }
 
     @Override
-    public List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds,
-                                                                              List<String> statuses) {
+    public List<SubmissionSummaryResponseDto> fetchSubmissionsByStatus(List<String> statuses) {
 
-        if (submissionIds == null || submissionIds.isEmpty()) {
+        if (statuses == null || statuses.isEmpty()) {
             return Collections.emptyList();
         }
 
-        List<Map<String, AttributeValue>> keys = submissionIds.stream()
-                .map(id -> Map.of(
-                        "submissionId", AttributeValue.fromS(id)
-                ))
-                .collect(Collectors.toList());
+        Map<String, String> expressionAttributeNames = Map.of(
+                "#st", "status"
+        );
 
-        KeysAndAttributes keysAndAttributes = KeysAndAttributes.builder()
-                .keys(keys)
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+
+        List<String> placeholders = new ArrayList<>();
+
+        for (int i = 0; i < statuses.size(); i++) {
+            String key = ":status" + i;
+            placeholders.add(key);
+            expressionAttributeValues.put(key, AttributeValue.fromS(statuses.get(i)));
+        }
+
+        String filterExpression = "#st IN (" + String.join(", ", placeholders) + ")";
+
+        ScanRequest scanRequest = ScanRequest.builder()
+                .tableName(tableName)
                 .projectionExpression(
                         "submissionId, createdAt, incomingPath, senderEmail, updatedAt, #st")
-                .expressionAttributeNames(Map.of(
-                        "#st", "status"
-                ))
+                .filterExpression(filterExpression)
+                .expressionAttributeNames(expressionAttributeNames)
+                .expressionAttributeValues(expressionAttributeValues)
                 .build();
 
-        BatchGetItemRequest request = BatchGetItemRequest.builder()
-                .requestItems(Map.of(
-                        tableName, keysAndAttributes
-                ))
-                .build();
-
-        Map<String, List<Map<String, AttributeValue>>> responses =
-                dynamoDbClient.batchGetItem(request).responses();
-
-        return responses.getOrDefault(tableName, Collections.emptyList())
+        return dynamoDbClient.scan(scanRequest)
+                .items()
                 .stream()
                 .map(this::mapToSubmissionSummary)
-                .filter(dto -> statuses.contains(dto.getStatus()))
                 .sorted(Comparator.comparing(
                         SubmissionSummaryResponseDto::getCreatedAt
                 ).reversed())
                 .collect(Collectors.toList());
     }
+
+//    @Override
+//    public List<SubmissionSummaryResponseDto> fetchSubmissionsByIdsWithFilter(List<String> submissionIds,
+//                                                                              List<String> statuses) {
+//
+//        if (submissionIds == null || submissionIds.isEmpty()) {
+//            return Collections.emptyList();
+//        }
+//
+//        List<Map<String, AttributeValue>> keys = submissionIds.stream()
+//                .map(id -> Map.of(
+//                        "submissionId", AttributeValue.fromS(id)
+//                ))
+//                .collect(Collectors.toList());
+//
+//        KeysAndAttributes keysAndAttributes = KeysAndAttributes.builder()
+//                .keys(keys)
+//                .projectionExpression(
+//                        "submissionId, createdAt, incomingPath, senderEmail, updatedAt, #st")
+//                .expressionAttributeNames(Map.of(
+//                        "#st", "status"
+//                ))
+//                .build();
+//
+//        BatchGetItemRequest request = BatchGetItemRequest.builder()
+//                .requestItems(Map.of(
+//                        tableName, keysAndAttributes
+//                ))
+//                .build();
+//
+//        Map<String, List<Map<String, AttributeValue>>> responses =
+//                dynamoDbClient.batchGetItem(request).responses();
+//
+//        return responses.getOrDefault(tableName, Collections.emptyList())
+//                .stream()
+//                .map(this::mapToSubmissionSummary)
+//                .filter(dto -> statuses.contains(dto.getStatus()))
+//                .sorted(Comparator.comparing(
+//                        SubmissionSummaryResponseDto::getCreatedAt
+//                ).reversed())
+//                .collect(Collectors.toList());
+//    }
 
     @Override
     public void updateReviewInProgress(String submissionId, String documentId) {
