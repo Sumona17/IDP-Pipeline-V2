@@ -1395,7 +1395,7 @@ const DocumentComparison: React.FC = () => {
                                 setEditingField(record.key);
                               }}
                               className="ml-2 flex-shrink-0"
-                              disabled={isDisabled}
+                              // disabled={isDisabled}
                             >
                               <img
                                 src={editIcon}
