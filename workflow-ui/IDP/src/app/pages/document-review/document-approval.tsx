@@ -776,6 +776,35 @@ const DocumentApproval: React.FC = () => {
     }
   }, [renderedPages, totalPages]);
 
+  const scrollToPage = useCallback(
+    (targetPage: number, behavior: ScrollBehavior = "smooth") => {
+      if (
+        !pdfScrollRef.current ||
+        !renderedPages[targetPage] ||
+        targetPage < 1 ||
+        targetPage > totalPages
+      )
+        return;
+
+      let cumulativeHeight = 0;
+      for (let i = 1; i < targetPage; i++) {
+        const prev = renderedPages[i];
+        if (prev) cumulativeHeight += prev.pageHeight + 16;
+      }
+
+      pdfScrollRef.current.scrollTo({
+        top: Math.max(0, cumulativeHeight),
+        behavior,
+      });
+    },
+    [renderedPages, totalPages],
+  );
+
+  useEffect(() => {
+    if (Object.keys(renderedPages).length === 0) return;
+    scrollToPage(currentPage);
+  }, [currentPage, renderedPages, scrollToPage]);
+
   const handleRowClick = (record: TableRow) => {
     if (record.isSection) return;
     setSelectedField(record);
@@ -1084,6 +1113,7 @@ const DocumentApproval: React.FC = () => {
       </div> */}
       </div>
 
+      <div className="h-screen flex flex-col overflow-hidden">
       <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
         {/* Tabs */}
         <div className="px-6 pt-3 flex items-center gap-6 border-b">
@@ -1357,7 +1387,16 @@ const DocumentApproval: React.FC = () => {
             <div className="relative flex-shrink-0 ml-2">
               <select
                 value={pageFilter}
-                onChange={(e) => setPageFilter(e.target.value)}
+                onChange={(e) => {
+                    const selectedPage = e.target.value;
+                    setPageFilter(selectedPage);
+                    if (selectedPage !== "all") {
+                      const page = Number(selectedPage);
+                      setCurrentPage(page);
+                      setHighlightBox(null);
+                      setTimeout(() => scrollToPage(page), 100);
+                    }
+                  }}
                 className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] bg-white appearance-none cursor-pointer outline-none"
               >
                 <option value="all">All Pages</option>
@@ -1559,6 +1598,7 @@ const DocumentApproval: React.FC = () => {
         ) : (
           <h4 className="text-gray-500">No Differences Found</h4>
         )}
+      </div>
       </div>
 
       <ConfirmationModal
