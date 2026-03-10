@@ -1059,6 +1059,9 @@ const DocumentApproval: React.FC = () => {
   }
 
   const docStatus = location.state.docStatus ?? [];
+  const isSaveDisabled = docStatus == "Approved";
+  const isSubmitDisabled = isSubmitting || docStatus == "Approved";
+  const isFieldEditingDisabled = isSaveDisabled && isSubmitDisabled;
 
   const handleFinalModalConfirm = () => {
     setFinalConfirmModal(false);
@@ -1202,7 +1205,7 @@ const DocumentApproval: React.FC = () => {
               <button
                 className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("save")}
-                disabled={docStatus == "Approved"}
+                disabled={isSaveDisabled}
               >
                 Save
               </button>
@@ -1210,7 +1213,7 @@ const DocumentApproval: React.FC = () => {
               <button
                 className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("submit")}
-                disabled={isSubmitting || docStatus == "Approved"}
+                disabled={isSubmitDisabled}
               >
                 Submit
               </button>
@@ -1502,6 +1505,7 @@ const DocumentApproval: React.FC = () => {
                               type="text"
                               autoFocus
                               value={currentDisplayValue}
+                              disabled={isFieldEditingDisabled}
                               onChange={(e) =>
                                 handleEditChange(
                                   record.key,
@@ -1536,19 +1540,21 @@ const DocumentApproval: React.FC = () => {
                               )}
                             </div>
                           )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingField(record.key);
-                            }}
-                            className="ml-2 flex-shrink-0"
-                          >
-                            <img
-                              src={editIcon}
-                              alt="edit"
-                              className="w-3 h-3 cursor-pointer"
-                            />
-                          </button>
+                          {!isFieldEditingDisabled && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingField(record.key);
+                              }}
+                              className="ml-2 flex-shrink-0"
+                            >
+                              <img
+                                src={editIcon}
+                                alt="edit"
+                                className="w-3 h-3 cursor-pointer"
+                              />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

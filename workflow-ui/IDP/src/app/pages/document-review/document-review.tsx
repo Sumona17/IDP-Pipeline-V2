@@ -992,6 +992,8 @@ const DocumentComparison: React.FC = () => {
   const docStatus = location.state.docStatus ?? [];
 
   const isDisabled = !location.state.isApprovalWindow;
+  const isSaveSubmitDisabled =
+    docStatus == "Pending Approval" || docStatus == "Approved";
 
   return (
     <>
@@ -1089,18 +1091,14 @@ const DocumentComparison: React.FC = () => {
               <button
                 className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("save")}
-                disabled={
-                  docStatus == "Pending Approval" || docStatus == "Approved"
-                }
+                disabled={isSaveSubmitDisabled}
               >
                 Save
               </button>
               <button
                 className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 onClick={() => handleOpenConfirmModal("submit")}
-                disabled={
-                  docStatus == "Pending Approval" || docStatus == "Approved"
-                }
+                disabled={isSaveSubmitDisabled}
               >
                 Send for Approval
                 {/* {changedCount > 0 && (
@@ -1393,6 +1391,7 @@ const DocumentComparison: React.FC = () => {
                                 type="text"
                                 autoFocus
                                 value={currentDisplayValue}
+                                disabled={isSaveSubmitDisabled}
                                 onChange={(e) =>
                                   handleEditChange(
                                     record.key,
@@ -1427,20 +1426,21 @@ const DocumentComparison: React.FC = () => {
                                 )}
                               </div>
                             )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingField(record.key);
-                              }}
-                              className="ml-2 flex-shrink-0"
-                              // disabled={isDisabled}
-                            >
-                              <img
-                                src={editIcon}
-                                alt="edit"
-                                className="w-3 h-3 cursor-pointer"
-                              />
-                            </button>
+                            {!isSaveSubmitDisabled && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingField(record.key);
+                                }}
+                                className="ml-2 flex-shrink-0"
+                              >
+                                <img
+                                  src={editIcon}
+                                  alt="edit"
+                                  className="w-3 h-3 cursor-pointer"
+                                />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
