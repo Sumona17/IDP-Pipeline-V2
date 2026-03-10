@@ -31,7 +31,9 @@ export default function DiffTable({ diff }: { diff: DiffItem[] }) {
 
   return (
     <div className="scrollable-div">
-      <Collapse defaultActiveKey={Object.keys(groupedData)}>
+      <Collapse
+      // defaultActiveKey={Object.keys(groupedData)}
+      >
         {Object.entries(groupedData).map(([section, sectionData]) => (
           <Panel
             header={`Section: ${section}`}

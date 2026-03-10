@@ -590,7 +590,7 @@ const DocumentApproval: React.FC = () => {
         isUpdated: computedDiff?.length > 0,
       });
       handleCloseConfirmModal();
-      showToast("success", "Document submitted successfully.");
+      // showToast("success", "Document submitted successfully.");
       setFinalChangeLog(updatedData);
       setFinalConfirmModal(true);
       // navigate("/dashboard");
@@ -612,7 +612,7 @@ const DocumentApproval: React.FC = () => {
   }, [diff]);
 
   const base64ToUint8Array = (base64: string): Uint8Array => {
-    const binaryString = atob(base64)
+    const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++)
       bytes[i] = binaryString.charCodeAt(i);
@@ -1025,7 +1025,6 @@ const DocumentApproval: React.FC = () => {
     return result;
   };
   const handleAiTabClick = async () => {
-
     setActiveView("ai");
     await loaddiffernce();
   };
@@ -1065,7 +1064,8 @@ const DocumentApproval: React.FC = () => {
 
   const handleFinalModalConfirm = () => {
     setFinalConfirmModal(false);
-    navigate("/dashboard");
+    showToast("success", "Document submitted successfully.");
+    setTimeout(() => navigate("/dashboard"), 800);
   };
 
   return (
@@ -1117,280 +1117,282 @@ const DocumentApproval: React.FC = () => {
       </div>
 
       <div className="h-screen flex flex-col overflow-hidden">
-      <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
-        {/* Tabs */}
-        <div className="px-6 pt-3 flex items-center gap-6 border-b">
-          <button
-            onClick={() => setActiveView("review")}
-            className={`pb-2 text-sm font-medium border-b-2 ${
-              activeView === "review"
-                ? "border-[#3C20F6] text-[#3C20F6]"
-                : "border-transparent text-gray-500"
-            }`}
-          >
-            Document Review
-          </button>
+        <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+          {/* Tabs */}
+          <div className="px-6 pt-3 flex items-center gap-6 border-b">
+            <button
+              onClick={() => setActiveView("review")}
+              className={`pb-2 text-sm font-medium border-b-2 ${
+                activeView === "review"
+                  ? "border-[#3C20F6] text-[#3C20F6]"
+                  : "border-transparent text-gray-500"
+              }`}
+            >
+              Document Review
+            </button>
 
-          <button
-            onClick={handleAiTabClick}
-            className={`pb-2 text-sm font-medium border-b-2 ${
-              activeView === "ai"
-                ? "border-[#3C20F6] text-[#3C20F6]"
-                : "border-transparent text-gray-500"
-            }`}
-          >
-            Modified Data
-          </button>
-        </div>
+            <button
+              onClick={handleAiTabClick}
+              className={`pb-2 text-sm font-medium border-b-2 ${
+                activeView === "ai"
+                  ? "border-[#3C20F6] text-[#3C20F6]"
+                  : "border-transparent text-gray-500"
+              }`}
+            >
+              Modified Data
+            </button>
+          </div>
 
-        {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#E6DAFF] rounded-xl">
-              {activeView === "review" ? (
-                <svg
-                  className="w-5 h-5 text-[#3C20F6]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-5 h-5 text-[#3C20F6]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
+          {/* Header */}
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-[#E6DAFF] rounded-xl">
+                {activeView === "review" ? (
+                  <svg
+                    className="w-5 h-5 text-[#3C20F6]"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-5 h-5 text-[#3C20F6]"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                )}
+              </div>
+
+              <div>
+                <h1 className="text-[18px] font-semibold text-gray-900">
+                  {activeView === "review"
+                    ? "Document Review"
+                    : "Modified Data"}
+                </h1>
+              </div>
+            </div>
+
+            {/* Errors */}
+            <div className="flex flex-col gap-1">
+              {dataError && (
+                <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
+                  ⚠️ Data: {dataError}
+                </p>
+              )}
+              {pdfError && (
+                <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
+                  ⚠️ PDF: {pdfError}
+                </p>
               )}
             </div>
 
-            <div>
-              <h1 className="text-[18px] font-semibold text-gray-900">
-                {activeView === "review" ? "Document Review" : "Modified Data"}
-              </h1>
-            </div>
-          </div>
-
-          {/* Errors */}
-          <div className="flex flex-col gap-1">
-            {dataError && (
-              <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                ⚠️ Data: {dataError}
-              </p>
-            )}
-            {pdfError && (
-              <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                ⚠️ PDF: {pdfError}
-              </p>
-            )}
-          </div>
-
-          {/* Buttons */}
-          {activeView === "review" && (
-            <div className="flex items-center gap-3">
-              <button
-                className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                onClick={() => handleOpenConfirmModal("save")}
-                disabled={isSaveDisabled}
-              >
-                Save
-              </button>
-
-              <button
-                className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                onClick={() => handleOpenConfirmModal("submit")}
-                disabled={isSubmitDisabled}
-              >
-                Submit
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div
-        className="flex flex-1 overflow-hidden gap-4 p-4"
-        style={{ display: activeView === "review" ? "flex" : "none" }}
-      >
-        <div className="w-[65%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-          <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-sm font-semibold text-[#4318FF] flex items-center gap-1.5">
-                  <svg
-                    className="w-4 h-4 text-[#3C20F6]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Document
-                </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Total Pages:{" "}
-                  <span className="text-xs text-gray-600">{totalPages}</span>
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 text-xs">
-                <div className="flex items-center gap-1 font-semibold">
-                  <span className="px-2 py-0.5 text-[#3C20F6] rounded-full text-xs font-medium">
-                    {String(currentPage).padStart(2, "0")}
-                  </span>
-                  <span className="text-gray-400">/</span>
-                  <span className="text-gray-600">
-                    {String(totalPages).padStart(2, "0")}
-                  </span>
-                </div>
-                <div className="flex-1 flex items-center gap-2">
-                  <button
-                    onClick={() => setZoom((p) => Math.max(p - 0.25, 0.25))}
-                    disabled={zoom <= 0.25}
-                    className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 12H4"
-                      />
-                    </svg>
-                  </button>
-                  <div className="flex-1 flex items-center gap-1.5">
-                    <input
-                      type="range"
-                      min="0.25"
-                      max="4"
-                      step="0.25"
-                      value={zoom}
-                      onChange={(e) => setZoom(Number(e.target.value))}
-                      className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]"
-                    />
-                    <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white">
-                      {Math.round(zoom * 125)}%
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setZoom((p) => Math.min(p + 0.25, 4))}
-                    disabled={zoom >= 4}
-                    className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </button>
-                </div>
+            {/* Buttons */}
+            {activeView === "review" && (
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={handleDownloadPdf}
-                  disabled={!encodedPdfData}
-                  className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-xs font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  onClick={() => handleOpenConfirmModal("save")}
+                  disabled={isSaveDisabled}
                 >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                  Download
+                  Save
+                </button>
+
+                <button
+                  className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  onClick={() => handleOpenConfirmModal("submit")}
+                  disabled={isSubmitDisabled}
+                >
+                  Submit
                 </button>
               </div>
-            </div>
-          </div>
-
-          <div
-            ref={pdfScrollRef}
-            className="flex-1 overflow-auto p-4 bg-gray-50"
-          >
-            <div ref={containerRef} className="relative">
-              <div ref={pagesContainerRef} className="relative" />
-              {renderHighlightBox()}
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="w-[35%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-          <h2 className="px-4 py-3 text-sm font-semibold text-[#4318FF]">
-            Mapped Data
-          </h2>
+        <div
+          className="flex flex-1 overflow-hidden gap-4 p-4"
+          style={{ display: activeView === "review" ? "flex" : "none" }}
+        >
+          <div className="w-[65%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+            <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#4318FF] flex items-center gap-1.5">
+                    <svg
+                      className="w-4 h-4 text-[#3C20F6]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Document
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Total Pages:{" "}
+                    <span className="text-xs text-gray-600">{totalPages}</span>
+                  </p>
+                </div>
 
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-            <div className="relative flex-shrink-0">
-              <select
-                value={confidenceFilter}
-                onChange={(e) => setConfidenceFilter(e.target.value)}
-                className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] bg-white appearance-none cursor-pointer outline-none"
-              >
-                <option value="all">All Confidence %</option>
-                <option value="below_50">Below 50%</option>
-                <option value="50_75">50% – 75%</option>
-                <option value="75_80">75% – 80%</option>
-                <option value="80_85">80% – 85%</option>
-                <option value="85_90">85% – 90%</option>
-                <option value="90_above">90% & Above</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                <svg
-                  className="w-3.5 h-3.5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                <div className="flex items-center gap-2 px-3 py-2 text-xs">
+                  <div className="flex items-center gap-1 font-semibold">
+                    <span className="px-2 py-0.5 text-[#3C20F6] rounded-full text-xs font-medium">
+                      {String(currentPage).padStart(2, "0")}
+                    </span>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-gray-600">
+                      {String(totalPages).padStart(2, "0")}
+                    </span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-2">
+                    <button
+                      onClick={() => setZoom((p) => Math.max(p - 0.25, 0.25))}
+                      disabled={zoom <= 0.25}
+                      className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M20 12H4"
+                        />
+                      </svg>
+                    </button>
+                    <div className="flex-1 flex items-center gap-1.5">
+                      <input
+                        type="range"
+                        min="0.25"
+                        max="4"
+                        step="0.25"
+                        value={zoom}
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className="w-28 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3C20F6]"
+                      />
+                      <span className="text-xs font-semibold text-gray-700 min-w-[40px] text-center px-1.5 py-0.5 bg-white">
+                        {Math.round(zoom * 125)}%
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setZoom((p) => Math.min(p + 0.25, 4))}
+                      disabled={zoom >= 4}
+                      className="p-1 rounded-full border border-[#3C20F6] text-[#3C20F6] hover:bg-[#E6DAFF] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleDownloadPdf}
+                    disabled={!encodedPdfData}
+                    className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-xs font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                    Download
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="relative flex-shrink-0 ml-2">
-              <select
-                value={pageFilter}
-                onChange={(e) => {
+
+            <div
+              ref={pdfScrollRef}
+              className="flex-1 overflow-auto p-4 bg-gray-50"
+            >
+              <div ref={containerRef} className="relative">
+                <div ref={pagesContainerRef} className="relative" />
+                {renderHighlightBox()}
+              </div>
+            </div>
+          </div>
+
+          <div className="w-[35%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+            <h2 className="px-4 py-3 text-sm font-semibold text-[#4318FF]">
+              Mapped Data
+            </h2>
+
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+              <div className="relative flex-shrink-0">
+                <select
+                  value={confidenceFilter}
+                  onChange={(e) => setConfidenceFilter(e.target.value)}
+                  className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] bg-white appearance-none cursor-pointer outline-none"
+                >
+                  <option value="all">All Confidence %</option>
+                  <option value="below_50">Below 50%</option>
+                  <option value="50_75">50% – 75%</option>
+                  <option value="75_80">75% – 80%</option>
+                  <option value="80_85">80% – 85%</option>
+                  <option value="85_90">85% – 90%</option>
+                  <option value="90_above">90% & Above</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                  <svg
+                    className="w-3.5 h-3.5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="relative flex-shrink-0 ml-2">
+                <select
+                  value={pageFilter}
+                  onChange={(e) => {
                     const selectedPage = e.target.value;
                     setPageFilter(selectedPage);
                     if (selectedPage !== "all") {
@@ -1400,211 +1402,211 @@ const DocumentApproval: React.FC = () => {
                       setTimeout(() => scrollToPage(page), 100);
                     }
                   }}
-                className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] bg-white appearance-none cursor-pointer outline-none"
-              >
-                <option value="all">All Pages</option>
-                {uniquePages.map((page) => (
-                  <option key={page} value={page}>
-                    Page {page}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                <svg
-                  className="w-3.5 h-3.5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                  className="pl-3 pr-8 py-2 text-xs font-medium border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#3C20F6] bg-white appearance-none cursor-pointer outline-none"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                  <option value="all">All Pages</option>
+                  {uniquePages.map((page) => (
+                    <option key={page} value={page}>
+                      Page {page}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                  <svg
+                    className="w-3.5 h-3.5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
-            <table className="w-full border-collapse text-sm">
-              <tbody className="bg-white divide-y divide-gray-50">
-                {filteredRows.map((record) => {
-                  if (record.isSection) {
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <table className="w-full border-collapse text-sm">
+                <tbody className="bg-white divide-y divide-gray-50">
+                  {filteredRows.map((record) => {
+                    if (record.isSection) {
+                      return (
+                        <tr key={record.key} className="bg-gray-50">
+                          <td
+                            colSpan={5}
+                            className="px-4 py-2.5 font-semibold text-[#3C20F6] text-xs border-l-4 border-[#3C20F6]"
+                          >
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                              {record.field}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    const currentDisplayValue =
+                      editedValues[record.key]?.newValue ?? record.value;
+                    const hasChanged =
+                      editedValues[record.key] &&
+                      editedValues[record.key].newValue !==
+                        editedValues[record.key].originalValue;
+
                     return (
-                      <tr key={record.key} className="bg-gray-50">
-                        <td
-                          colSpan={5}
-                          className="px-4 py-2.5 font-semibold text-[#3C20F6] text-xs border-l-4 border-[#3C20F6]"
-                        >
-                          <div className="flex items-center gap-2">
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                      <tr
+                        key={record.key}
+                        onClick={() => handleRowClick(record)}
+                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
+                          selectedField?.key === record.key
+                            ? "bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]"
+                            : "hover:bg-gray-50 border-l-4 border-l-transparent"
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-medium text-gray-900">
+                              {record.field}
+                            </span>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
+                                record.confidence !== null &&
+                                record.confidence >= 95
+                                  ? "bg-emerald-100"
+                                  : record.confidence !== null &&
+                                      record.confidence >= CONFIDENCE_THRESHOLD
+                                    ? "bg-amber-100"
+                                    : record.confidence !== null
+                                      ? "bg-red-100"
+                                      : "bg-gray-100"
+                              }`}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              {record.confidencePercent !== "-"
+                                ? `${record.confidencePercent}%`
+                                : "-"}
+                            </span>
+                          </div>
+                          <div className="flex items-center border border-gray-200 rounded-lg px-2 py-1.5 bg-[#F6F6F6]">
+                            {editingField === record.key ? (
+                              <input
+                                type="text"
+                                autoFocus
+                                value={currentDisplayValue}
+                                disabled={isFieldEditingDisabled}
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    record.key,
+                                    record.value,
+                                    e.target.value,
+                                  )
+                                }
+                                onBlur={() => setEditingField(null)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full text-xs outline-none bg-transparent"
                               />
-                            </svg>
-                            {record.field}
+                            ) : (
+                              <div className="flex-1 text-xs text-gray-700">
+                                {hasChanged ? (
+                                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                                    <span className="line-through text-gray-500 text-left bg-[#F9B53642] truncate px-1 rounded">
+                                      {editedValues[record.key].originalValue}
+                                    </span>
+                                    <div className="flex justify-center">
+                                      <img
+                                        src={arrowIcon}
+                                        alt="→"
+                                        className="w-5 h-5 object-contain"
+                                      />
+                                    </div>
+                                    <span className="text-gray-800 text-right font-medium truncate">
+                                      {editedValues[record.key].newValue}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span>{record.value}</span>
+                                )}
+                              </div>
+                            )}
+                            {!isFieldEditingDisabled && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingField(record.key);
+                                }}
+                                className="ml-2 flex-shrink-0"
+                              >
+                                <img
+                                  src={editIcon}
+                                  alt="edit"
+                                  className="w-3 h-3 cursor-pointer"
+                                />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
                     );
-                  }
-
-                  const currentDisplayValue =
-                    editedValues[record.key]?.newValue ?? record.value;
-                  const hasChanged =
-                    editedValues[record.key] &&
-                    editedValues[record.key].newValue !==
-                      editedValues[record.key].originalValue;
-
-                  return (
-                    <tr
-                      key={record.key}
-                      onClick={() => handleRowClick(record)}
-                      className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
-                        selectedField?.key === record.key
-                          ? "bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]"
-                          : "hover:bg-gray-50 border-l-4 border-l-transparent"
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-medium text-gray-900">
-                            {record.field}
-                          </span>
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
-                              record.confidence !== null &&
-                              record.confidence >= 95
-                                ? "bg-emerald-100"
-                                : record.confidence !== null &&
-                                    record.confidence >= CONFIDENCE_THRESHOLD
-                                  ? "bg-amber-100"
-                                  : record.confidence !== null
-                                    ? "bg-red-100"
-                                    : "bg-gray-100"
-                            }`}
-                          >
-                            {record.confidencePercent !== "-"
-                              ? `${record.confidencePercent}%`
-                              : "-"}
-                          </span>
-                        </div>
-                        <div className="flex items-center border border-gray-200 rounded-lg px-2 py-1.5 bg-[#F6F6F6]">
-                          {editingField === record.key ? (
-                            <input
-                              type="text"
-                              autoFocus
-                              value={currentDisplayValue}
-                              disabled={isFieldEditingDisabled}
-                              onChange={(e) =>
-                                handleEditChange(
-                                  record.key,
-                                  record.value,
-                                  e.target.value,
-                                )
-                              }
-                              onBlur={() => setEditingField(null)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full text-xs outline-none bg-transparent"
-                            />
-                          ) : (
-                            <div className="flex-1 text-xs text-gray-700">
-                              {hasChanged ? (
-                                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                                  <span className="line-through text-gray-500 text-left bg-[#F9B53642] truncate px-1 rounded">
-                                    {editedValues[record.key].originalValue}
-                                  </span>
-                                  <div className="flex justify-center">
-                                    <img
-                                      src={arrowIcon}
-                                      alt="→"
-                                      className="w-5 h-5 object-contain"
-                                    />
-                                  </div>
-                                  <span className="text-gray-800 text-right font-medium truncate">
-                                    {editedValues[record.key].newValue}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span>{record.value}</span>
-                              )}
-                            </div>
-                          )}
-                          {!isFieldEditingDisabled && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingField(record.key);
-                              }}
-                              className="ml-2 flex-shrink-0"
-                            >
-                              <img
-                                src={editIcon}
-                                alt="edit"
-                                className="w-3 h-3 cursor-pointer"
-                              />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* FIX 3b: always mounted, hidden via display:none instead of && conditional */}
-      <div
-        className="p-4"
-        style={{ display: activeView === "ai" ? "block" : "none" }}
-      >
-        {isDiffLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#3C20F6]" />
-          </div>
-        ) : diffResponse?.differences?.length ? (
-          <table className="min-w-full border border-gray-200 text-sm">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="border px-3 py-2 text-left">Page</th>
-                <th className="border px-3 py-2 text-left">Field</th>
-                <th className="border px-3 py-2 text-left">Original Value</th>
-                <th className="border px-3 py-2 text-left">Updated Value</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {diffResponse.differences.map((item: any, index: number) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="border px-3 py-2">{item.page}</td>
-                  <td className="border px-3 py-2">{item.path}</td>
-                  <td className="border px-3 py-2 text-black-500">
-                    {item.originalValue}
-                  </td>
-                  <td className="border px-3 py-2 text-black-500">
-                    {item.newValue}
-                  </td>
+        {/* FIX 3b: always mounted, hidden via display:none instead of && conditional */}
+        <div
+          className="p-4"
+          style={{ display: activeView === "ai" ? "block" : "none" }}
+        >
+          {isDiffLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#3C20F6]" />
+            </div>
+          ) : diffResponse?.differences?.length ? (
+            <table className="min-w-full border border-gray-200 text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border px-3 py-2 text-left">Page</th>
+                  <th className="border px-3 py-2 text-left">Field</th>
+                  <th className="border px-3 py-2 text-left">Original Value</th>
+                  <th className="border px-3 py-2 text-left">Updated Value</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <h4 className="text-gray-500">No Differences Found</h4>
-        )}
-      </div>
+              </thead>
+
+              <tbody>
+                {diffResponse.differences.map((item: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="border px-3 py-2">{item.page}</td>
+                    <td className="border px-3 py-2">{item.path}</td>
+                    <td className="border px-3 py-2 text-black-500">
+                      {item.originalValue}
+                    </td>
+                    <td className="border px-3 py-2 text-black-500">
+                      {item.newValue}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <h4 className="text-gray-500">No Differences Found</h4>
+          )}
+        </div>
       </div>
 
       <ConfirmationModal
