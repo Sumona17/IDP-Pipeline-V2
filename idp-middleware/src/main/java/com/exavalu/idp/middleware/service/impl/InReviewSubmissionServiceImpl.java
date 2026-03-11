@@ -41,7 +41,7 @@ public class InReviewSubmissionServiceImpl implements InReviewSubmissionService 
     @Override
     public void updateStatus(InReviewSubmissionRequestDto dto) {
 
-        inReviewRepository.updateSubmissionStatus(dto.getSubmissionId(), STATUS, dto.getUserName(), dto.getEMail());
+        inReviewRepository.updateSubmissionStatus(dto.getSubmissionId(), STATUS, dto.getUserName(), dto.getEmail());
 
         inReviewRepository.updateSubmissionTableStatus(dto.getSubmissionId(), STATUS);
     }

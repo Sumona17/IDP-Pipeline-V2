@@ -537,7 +537,7 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                             ? new Date(step.executedAt).toLocaleString()
                             : "-"}
                         </div>
-                        {(step.requestPayload || shouldShowResponsePayload) && (step.nodeName !== 'DOCUMENT_WATCHER' && step.nodeName !== 'DOCUMENT_INGESTION') && (
+                        {(step.requestPayload || shouldShowResponsePayload) && (step.nodeName !== 'DOCUMENT_WATCHER' && step.nodeName !== 'DOCUMENT_INGESTION' && step.nodeName !== 'DOWNSTREAM_FLOW') && (
                           <div className="mt-3 space-y-2">
                             {/* {step.requestPayload && (
                             <details className="bg-white border border-gray-200 rounded-md">

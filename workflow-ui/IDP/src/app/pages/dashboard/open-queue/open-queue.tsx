@@ -94,7 +94,7 @@ const OpenQueue: React.FC<OpenQueueProps> = ({
           submissionId,
           status: "IN-REVIEW",
           userName,
-          eMail: email,
+          email: email,
         });
 
         await refreshSubmissions();

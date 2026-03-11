@@ -21,6 +21,7 @@ public class IdpDocumentEventDTO {
 
     private String s3Key;
     private String submissionId;
+    private String documentId;
     private String emailSubject;
     private String senderEmail;
     private String formType;

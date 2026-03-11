@@ -2,6 +2,7 @@ package com.exavalu.idp.middleware.service.impl;
 
 import com.exavalu.idp.middleware.dto.*;
 import com.exavalu.idp.middleware.repository.SubmissionRepository;
+import com.exavalu.idp.middleware.service.EventBridgePublisherService;
 import com.exavalu.idp.middleware.service.S3FileService;
 import com.exavalu.idp.middleware.service.SubmissionRecordService;
 import com.exavalu.idp.middleware.utility.JsonComparator;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
     private final WorkflowLogClient workflowLogClient;
 
     private final ObjectMapper objectMapper;
+    private final EventBridgePublisherService publisherService;
 
     @Override
     public List<SubmissionSummaryResponseDto> fetchUsedRecords() {
@@ -111,14 +114,15 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         JsonNode extractedNode = objectMapper.valueToTree(dataRequestDto.getExtractedDataJson());
         JsonNode diffNode = objectMapper.valueToTree(dataRequestDto.getDiffJson());
 
-        if (Boolean.TRUE.equals(dataRequestDto.getIsUpdated())) {
+        SubmissionFileMetaDto fileMeta = repository.getFileMeta(submissionId, documentId);
+        String basePath = submissionId + "/" + documentId + "/";
 
-            SubmissionFileMetaDto fileMeta = repository.getFileMeta(submissionId, documentId);
+        if (Boolean.TRUE.equals(dataRequestDto.getIsUpdated())) {
 
             String currentKey = fileMeta.getExtractedDataS3Key();
             int newVersion = extractAndIncrementVersion(currentKey);
 
-            String basePath = submissionId + "/" + documentId + "/";
+//            String basePath = submissionId + "/" + documentId + "/";
             String versionFolder = "v" + newVersion;
             String fileName = fileMeta.getFileName() + ".json";
 
@@ -151,6 +155,21 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
                 .build();
 
         workflowLogClient.logWorkflowEvent(logRequest);
+
+        IdpDocumentEventDTO event = IdpDocumentEventDTO.builder()
+                .eventId(UUID.randomUUID().toString())
+                .submittedBy(updatedBy)
+                .submittedAt(Instant.now().toEpochMilli())
+                .status("SUBMITTED")
+                .s3Key(basePath+fileMeta.getFileName())
+                .senderEmail("")
+                .submissionId(submissionId)
+                .documentId(documentId)
+                .emailSubject("")
+                .formType(resolveDocumentType(fileMeta.getFileName()))
+                .build();
+
+        publisherService.publishDocumentEvent(event);
 
         return submissionId;
     }
@@ -325,5 +344,24 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build response", e);
         }
+    }
+
+    private static String resolveDocumentType(String fileName) {
+
+        if (fileName == null) {
+            return null;
+        }
+
+        String name = fileName.toLowerCase();
+
+        if (name.contains("140")) {
+            return "Acord 140";
+        } else if (name.contains("125")) {
+            return "Acord 125";
+        } else if (name.contains("loss") || name.contains("lossrun")) {
+            return "Loss Run";
+        }
+
+        return "Unknown";
     }
 }

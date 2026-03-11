@@ -1,6 +1,8 @@
 package com.exavalu.idp.middleware.service;
 
 import com.exavalu.idp.middleware.dto.IdpDocumentEventDTO;
+import com.exavalu.idp.middleware.dto.WorkflowLogRequestDto;
+import com.exavalu.idp.middleware.service.impl.WorkflowLogClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ public class EventBridgePublisherService {
 
     private final EventBridgeClient eventBridgeClient;
     private final ObjectMapper objectMapper;
+    private final WorkflowLogClient workflowLogClient;
 
     @Value("${aws.eventbridge.bus-name}")
     private String busName;
@@ -45,6 +48,17 @@ public class EventBridgePublisherService {
                     .build();
 
             eventBridgeClient.putEvents(request);
+
+            WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
+                    .workflowInstanceId(event.getDocumentId())
+                    .nodeName("DOWNSTREAM_FLOW")
+                    .status("COMPLETED")
+                    .message("Event successfully published")
+                    .requestPayload(objectMapper.createObjectNode())
+                    .responsePayload(objectMapper.createObjectNode())
+                    .build();
+
+            workflowLogClient.logWorkflowEvent(logRequest);
 
             log.info("Event successfully published");
 

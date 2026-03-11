@@ -5,7 +5,7 @@ export interface UpdateStatusRequest {
   submissionId: string;
   status: string;
   userName: string;
-  eMail: string;
+  email: string;
 }
 
 export interface UpdateStatusResponse {

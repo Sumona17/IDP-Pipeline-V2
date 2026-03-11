@@ -11,5 +11,5 @@ public class InReviewSubmissionRequestDto {
 
     private String submissionId;
     private String userName;
-    private String eMail;
+    private String email;
 }
