@@ -588,6 +588,7 @@ const DocumentApproval: React.FC = () => {
         extractedDataJson: updatedData,
         isFinalSubmit: true,
         isUpdated: computedDiff?.length > 0,
+        diffJson: computedDiff,
       });
       handleCloseConfirmModal();
       // showToast("success", "Document submitted successfully.");

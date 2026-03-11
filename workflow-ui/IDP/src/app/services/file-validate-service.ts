@@ -53,6 +53,7 @@ export interface SubmitExtractedDataRequest {
   extractedDataJson: Record<string, any>;
   isFinalSubmit: boolean;
   isUpdated: boolean;
+  diffJson: DiffEntry[];
 }
 
 export const getValidateData = async (
@@ -112,6 +113,7 @@ export const submitExtractedData = async (
       extractedDataJson: payload.extractedDataJson,
       isFinalSubmit: payload.isFinalSubmit,
       isUpdated: payload.isUpdated,
+      diffJson: payload.diffJson,
     },
     { useCustomUrl: true },
   );

@@ -427,20 +427,56 @@ public class SubmissionRepositoryImpl implements SubmissionRepository {
                                         "file_contains[" + index + "].fileProgress = :progress, " +
                                         "file_contains[" + index + "].updatedAt = :updatedAt, " +
                                         "file_contains[" + index + "].updatedBy = :updatedBy, " +
-                                        "#st = :status, " +
                                         "updatedAt = :updatedAt, " +
                                         "updatedBy = :updatedBy"
                         )
-                        .expressionAttributeNames(Map.of(
-                                "#st", "status"
-                        ))
                         .expressionAttributeValues(Map.of(
                                 ":status", AttributeValue.fromS("Pending Approval"),
                                 ":progress", AttributeValue.fromN("90"),
                                 ":updatedAt", AttributeValue.fromN(updatedAt),
                                 ":updatedBy", AttributeValue.fromS(updatedBy)
-                        ))
-                        .build());
+                        )).build());
+
+        Map<String, AttributeValue> item = dynamoDbClient.getItem(
+                GetItemRequest.builder()
+                        .tableName(tableName)
+                        .key(Map.of("submissionId",
+                                AttributeValue.fromS(submissionId)))
+                        .projectionExpression("file_contains").build()
+        ).item();
+
+        List<AttributeValue> fileContains = item.get("file_contains").l();
+
+        boolean allPendingApproval = fileContains.stream()
+                .allMatch(file ->
+                        "Pending Approval".equals(
+                                file.m().get("ingestion_status").s()
+                        )
+                );
+
+        if (allPendingApproval) {
+            dynamoDbClient.updateItem(
+                    UpdateItemRequest.builder()
+                            .tableName(tableName)
+                            .key(Map.of(
+                                    "submissionId",
+                                    AttributeValue.fromS(submissionId)
+                            ))
+                            .updateExpression(
+                                    "SET #st = :status, updatedAt = :updatedAt, updatedBy = :updatedBy"
+                            )
+                            .expressionAttributeNames(Map.of(
+                                    "#st", "status"
+                            ))
+                            .expressionAttributeValues(Map.of(
+                                    ":status", AttributeValue.fromS("Pending Approval"),
+                                    ":updatedAt", AttributeValue.fromN(updatedAt),
+                                    ":updatedBy", AttributeValue.fromS(updatedBy)
+                            ))
+                            .build()
+            );
+        }
+
     }
 
     public void updateExtractionDataStatus(String submissionId, String documentId, String updatedBy, String updatedAt) {

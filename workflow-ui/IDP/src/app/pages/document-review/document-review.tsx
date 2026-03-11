@@ -579,6 +579,7 @@ const DocumentComparison: React.FC = () => {
         extractedDataJson: updatedData,
         isFinalSubmit: false,
         isUpdated: computedDiff?.length > 0,
+        diffJson: computedDiff,
       });
       handleCloseConfirmModal();
       showToast("success", "Document submitted successfully.");

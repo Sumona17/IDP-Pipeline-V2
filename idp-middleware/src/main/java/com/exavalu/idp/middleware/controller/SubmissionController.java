@@ -98,5 +98,14 @@ public class SubmissionController {
         return ApiResponseDto.success(service.getDifferenceData(request), "Difference data fetched successfully");
     }
 
+    @PostMapping("/getValidateDataForApprover")
+    public ApiResponseDto<ValidateDataInfoApproverResponseDto> getValidateDataForApprover(
+            @RequestBody ValidateDataRequestDto request) {
+
+        ValidateDataInfoApproverResponseDto response = service.getValidateDataForApprover(request);;
+
+        return ApiResponseDto.success(response, "Validate data fetched successfully");
+    }
+
 
 }

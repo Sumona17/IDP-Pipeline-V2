@@ -5,6 +5,7 @@ import com.exavalu.idp.middleware.repository.SubmissionRepository;
 import com.exavalu.idp.middleware.service.S3FileService;
 import com.exavalu.idp.middleware.service.SubmissionRecordService;
 import com.exavalu.idp.middleware.utility.JsonComparator;
+import com.exavalu.idp.middleware.utility.JsonModificationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -108,6 +109,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         String updatedAt = String.valueOf(Instant.now().getEpochSecond());
 
         JsonNode extractedNode = objectMapper.valueToTree(dataRequestDto.getExtractedDataJson());
+        JsonNode diffNode = objectMapper.valueToTree(dataRequestDto.getDiffJson());
 
         if (Boolean.TRUE.equals(dataRequestDto.getIsUpdated())) {
 
@@ -121,8 +123,10 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
             String fileName = fileMeta.getFileName() + ".json";
 
             String newExtractedKey = basePath + versionFolder + "/" + fileName;
+            String diffKey = basePath + versionFolder + "/diff.json";
 
             s3FileService.uploadJsonToS3(newExtractedKey, extractedNode);
+            s3FileService.uploadJsonToS3(diffKey, diffNode);
 
             repository.updateExtractedDataKey(
                     submissionId,
@@ -135,13 +139,15 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         repository.updateReviewCompletedStatus(submissionId, documentId, updatedBy, updatedAt);
 
+        JsonNode wrappedDiff = wrapDiffWithUpdatedBy(diffNode, updatedBy, updatedAt);
+
         WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
                 .workflowInstanceId(dataRequestDto.getDocumentId())
                 .nodeName("DOCUMENT_REVIEW_APPROVAL")
                 .status("COMPLETED")
                 .message("Document Submitted")
                 .requestPayload(objectMapper.createObjectNode())
-                .responsePayload(extractedNode)
+                .responsePayload(wrappedDiff)
                 .build();
 
         workflowLogClient.logWorkflowEvent(logRequest);
@@ -158,6 +164,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         String updatedAt = String.valueOf(Instant.now().getEpochSecond());
 
         JsonNode extractedNode = objectMapper.valueToTree(dataRequestDto.getExtractedDataJson());
+        JsonNode diffNode = objectMapper.valueToTree(dataRequestDto.getDiffJson());
 
         if (Boolean.TRUE.equals(dataRequestDto.getIsUpdated())) {
 
@@ -171,8 +178,10 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
             String fileName = fileMeta.getFileName() + ".json";
 
             String newExtractedKey = basePath + versionFolder + "/" + fileName;
+            String diffKey = basePath + versionFolder + "/diff.json";
 
             s3FileService.uploadJsonToS3(newExtractedKey, extractedNode);
+            s3FileService.uploadJsonToS3(diffKey, diffNode);
 
             repository.updateExtractedDataKey(
                     submissionId,
@@ -184,6 +193,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         }
 
         repository.pendingForApprovalStatus(submissionId, documentId, updatedBy, updatedAt);
+        JsonNode wrappedDiff = wrapDiffWithUpdatedBy(diffNode, updatedBy, updatedAt);
 
         WorkflowLogRequestDto logRequest = WorkflowLogRequestDto.builder()
                 .workflowInstanceId(dataRequestDto.getDocumentId())
@@ -191,7 +201,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
                 .status("COMPLETED")
                 .message("Document send for approval")
                 .requestPayload(objectMapper.createObjectNode())
-                .responsePayload(extractedNode)
+                .responsePayload(wrappedDiff)
                 .build();
 
         workflowLogClient.logWorkflowEvent(logRequest);
@@ -226,7 +236,6 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
     public ValidateSubmitDataInfoResponseDto getDifferenceData(ValidateDataRequestDto request) {
 
         ValidateSubmitDataInfoResponseDto dataInfo = new ValidateSubmitDataInfoResponseDto();
-//        dataInfo.setExtractedData(s3FileService.getJsonNodeFromS3Key(request.getExtractedDataKey()));
 
         String voPath = request.getExtractedDataKey().replaceAll("/v\\d+/", "/v0/");
         JsonNode originalJson = s3FileService.getRawFromS3Key(voPath);
@@ -234,6 +243,29 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         List<JsonDiffDto> differences = JsonComparator.compare(originalJson, updatedJson);
         dataInfo.setDifferences(differences);
+
+        return dataInfo;
+    }
+
+    @Override
+    public ValidateDataInfoApproverResponseDto getValidateDataForApprover(ValidateDataRequestDto request) {
+
+        ValidateDataInfoApproverResponseDto dataInfo = new ValidateDataInfoApproverResponseDto();
+
+        String voPath = request.getExtractedDataKey().replaceAll("/v\\d+/", "/v0/");
+        JsonNode originalJson = s3FileService.getRawFromS3Key(voPath);
+        JsonNode updatedJson = s3FileService.getRawFromS3Key(request.getExtractedDataKey());
+
+        List<JsonDiffDto> differences = JsonComparator.compare(originalJson, updatedJson);
+        dataInfo.setDifferences(differences);
+
+        dataInfo.setEncodedPdfData(s3FileService.getBase64FromS3Uri(request.getOriginalFileKey()));
+
+        JsonNode result = updatedJson.deepCopy();
+        JsonModificationService.markModifications(originalJson, result);
+        ObjectNode headerInfo = buildHeaderInfo(request.getExtractedDataKey(), updatedJson, objectMapper);
+
+        dataInfo.setExtractedData(buildResponse(headerInfo, result, objectMapper));
 
         return dataInfo;
     }
@@ -259,5 +291,39 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
         int currentVersion = Integer.parseInt(versionPart.substring(1));
 
         return currentVersion + 1;
+    }
+
+    private ObjectNode buildHeaderInfo(String s3Key, JsonNode jsonNode, ObjectMapper objectMapper) {
+
+        String submissionId = s3Key.split("/")[0];
+
+        String fullFileName = s3Key.substring(s3Key.lastIndexOf("/") + 1);
+
+        String documentName = fullFileName
+                .replaceAll("\\.(pdf|txt|doc|docx)?\\.json$", "")
+                .replaceAll("\\.json$", "");
+
+        ObjectNode headerInfo = objectMapper.createObjectNode();
+        headerInfo.put("submissionId", submissionId);
+        headerInfo.put("documentName", documentName);
+
+        if (jsonNode.has("documentType")) {
+            headerInfo.put("documentType", jsonNode.get("documentType").asText());
+        }
+
+        return headerInfo;
+    }
+
+    private Object buildResponse(ObjectNode headerInfo, JsonNode data, ObjectMapper objectMapper) {
+
+        ObjectNode rootNode = objectMapper.createObjectNode();
+        rootNode.set("headerInfo", headerInfo);
+        rootNode.set("data", data);
+
+        try {
+            return objectMapper.treeToValue(rootNode, Object.class);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to build response", e);
+        }
     }
 }
