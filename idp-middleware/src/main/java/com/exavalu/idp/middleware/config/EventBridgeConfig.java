@@ -14,19 +14,19 @@ public class EventBridgeConfig {
     @Value("${aws.region}")
     private String region;
 
-    @Value("${aws.profile:default}")
-    private String profile;
+//    @Value("${aws.profile:default}")
+//    private String profile;
 
     @Bean
     public EventBridgeClient eventBridgeClient() {
 
         return EventBridgeClient.builder()
                 .region(Region.of(region))
-                .credentialsProvider(
-                        ProfileCredentialsProvider.builder()
-                                .profileName(profile)
-                                .build()
-                )
+//                .credentialsProvider(
+//                        ProfileCredentialsProvider.builder()
+//                                .profileName(profile)
+//                                .build()
+//                )
                 .build();
     }
 }
