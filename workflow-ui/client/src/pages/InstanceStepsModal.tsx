@@ -36,6 +36,12 @@ interface DocumentReviewParsedPayload {
   updatedAt: string;
 }
 
+interface DocumentReviewDiffSnapshot {
+  diff: unknown[];
+  updatedBy?: unknown;
+  updatedAt?: unknown;
+}
+
 interface ClassifierValue {
   description: string;
 }
@@ -259,30 +265,44 @@ const parseDocumentReviewPayload = (
 ): DocumentReviewParsedPayload | null => {
   if (!payload) return null;
 
-  const normalizedPayload =
-    typeof payload === "string"
-      ? (() => {
-          try {
-            return JSON.parse(payload) as unknown;
-          } catch {
-            return null;
-          }
-        })()
-      : payload;
+  const normalizedPayload = normalizeJsonPayload(payload);
 
   if (!normalizedPayload || typeof normalizedPayload !== "object") return null;
 
-  const data = normalizedPayload as {
-    diff?: unknown;
-    updatedBy?: unknown;
-    updatedAt?: unknown;
+  const diffSnapshots: DocumentReviewDiffSnapshot[] = [];
+
+  const collectDiffSnapshots = (value: unknown) => {
+    if (!value || typeof value !== "object") return;
+
+    if (Array.isArray(value)) {
+      value.forEach(collectDiffSnapshots);
+      return;
+    }
+
+    const data = value as {
+      diff?: unknown;
+      updatedBy?: unknown;
+      updatedAt?: unknown;
+    };
+
+    if (Array.isArray(data.diff) && data.diff.length > 0) {
+      diffSnapshots.push({
+        diff: data.diff,
+        updatedBy: data.updatedBy,
+        updatedAt: data.updatedAt,
+      });
+    }
+
+    Object.values(data).forEach(collectDiffSnapshots);
   };
 
-  const diff = data.diff;
-  if (!Array.isArray(diff) || diff.length === 0) return null;
+  collectDiffSnapshots(normalizedPayload);
+
+  const latestSnapshot = diffSnapshots.at(-1);
+  if (!latestSnapshot) return null;
 
   const rows: DocumentReviewTableRow[] = [];
-  diff.forEach((entry) => {
+  latestSnapshot.diff.forEach((entry) => {
     if (!entry || typeof entry !== "object") return;
     const values = entry as DocumentReviewDiffValue;
     rows.push({
@@ -296,8 +316,8 @@ const parseDocumentReviewPayload = (
 
   return {
     rows,
-    updatedBy: toDisplayValue(data.updatedBy),
-    updatedAt: formatUnixToLocaleDate(data.updatedAt),
+    updatedBy: toDisplayValue(latestSnapshot.updatedBy),
+    updatedAt: formatUnixToLocaleDate(latestSnapshot.updatedAt),
   };
 };
 
@@ -410,7 +430,7 @@ export const InstanceStepsModal = ({
                   .map((step) => {
                     const style = getStepStatusStyle(step.status);
                     const isDocumentReview =
-                      step.nodeName === "DOCUMENT_REVIEW";
+                      step.nodeName === "DOCUMENT_REVIEW" || step.nodeName === "DOCUMENT_REVIEW_APPROVAL";
                     const isDocumentClassifier = step.nodeName === "DOCUMENT_CLASSIFIER";
                     const documentReviewData = isDocumentReview
                       ? parseDocumentReviewPayload(step.responsePayload)
