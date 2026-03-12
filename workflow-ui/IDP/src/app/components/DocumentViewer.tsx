@@ -42,7 +42,7 @@ const META = new Set<string>([
   'line', 'Line',
   'bounding_box', 'Bounding Box',
   'confidence_score', 'Confidence Score',
-  'top', 'left', 'width', 'height', 'Size',
+  'top', 'left', 'width', 'height', 'Size', 'Page' , 'page'
 ]);
 
 const PAGE_LABEL_KEYS = new Set<string>([

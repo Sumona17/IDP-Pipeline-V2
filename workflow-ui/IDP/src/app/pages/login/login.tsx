@@ -2,7 +2,6 @@ import React, { useCallback, useEffect } from "react";
 import { useAuth } from "react-oidc-context";
 import { useNavigate } from "react-router-dom";
 import "./login.css";
-import Logo from "../../../../public/assets/Exasure Icon.svg";
 
 
 const Login: React.FC = () => {
@@ -36,7 +35,7 @@ const Login: React.FC = () => {
           <img src={Logo} alt="Exasure Logo" className="w-20 h-20" />
         </div> */}
 
-        <h2 className="title mt-6 font-semibold text-2xl">Intelligent Document Processing</h2>
+        <h2 className="title font-semibold text-2xl">Intelligent Document Processing</h2>
 
         <p className="subtitle mt-2 text-sm opacity-90 text-center">
           AI-powered document understanding for smarter automation
