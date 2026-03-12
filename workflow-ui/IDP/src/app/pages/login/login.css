@@ -1,96 +1,84 @@
+/* Main Layout */
 .login-container {
-  display: flex;
-  height: 100vh;
-  width: 100%;
-  font-family: Arial, sans-serif;
-}
-
-.left-panel {
-  width: 50%;
-  background: linear-gradient(135deg, #5b00ff, #0080ff);
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 80px;
-}
-
-.left-content {
-  text-align: center;
-  max-width: 500px;
-}
-
-.brand-title {
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.brand-subtitle {
-  margin-top: 20px;
-  font-size: 16px;
-  opacity: 0.9;
-}
-
-.right-panel {
-  width: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #f8f9fb;
-}
-
-.login-card {
   background: white;
-  padding: 30px;
-  width: 400px;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
-.title {
+/* Left Gradient Panel */
+.left-panel {
+  width: 45%;
+  background: linear-gradient(135deg, #5b00ff, #0080ff, #c76bff);
+  border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+  padding: 40px;
   text-align: center;
-  font-size: 24px;
-  margin-bottom: 24px;
 }
 
+/* Logo Circle */
+.logo-circle {
+  background: white;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-text {
+  font-size: 26px;
+  font-weight: bold;
+  color: #243b6b;
+}
+
+/* Right Panel */
+.right-panel {
+  width: 55%;
+}
+
+/* Inputs */
 .input-label {
   font-size: 14px;
   font-weight: 500;
+  margin-bottom: 6px;
 }
 
 .input-box {
-  width: 100%;
+  width: 320px;
   padding: 10px 14px;
-  margin-top: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid #d8d8d8;
   border-radius: 8px;
+  outline: none;
+  font-size: 14px;
 }
 
 .input-box:focus {
-  outline: none;
   border-color: #5b00ff;
 }
 
+/* Checkbox */
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #5b00ff;
+}
+
+/* Sign In Button */
 .signin-btn {
-  width: 100%;
-  margin-top: 24px;
-  padding: 12px;
+  width: 320px;
   background: #5b00ff;
   color: white;
+  padding: 12px;
   border-radius: 8px;
-  font-size: 20px;
-  font-weight: 250;
-  cursor: pointer;
-  border: none;
+  font-size: 16px;
+  transition: 0.2s;
 }
 
 .signin-btn:hover {
   background: #4b00d9;
 }
 
-.error-text {
-  margin-top: 12px;
-  color: red;
-  font-size: 14px;
+/* Footer */
+.footer-text {
+  font-size: 12px;
+  opacity: 0.8;
 }
