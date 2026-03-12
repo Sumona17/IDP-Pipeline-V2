@@ -568,7 +568,6 @@ const DocumentComparison: React.FC = () => {
   const handleFinalSubmit = useCallback(async () => {
     const computedDiff = computeDiff();
     setDiff(computedDiff);
-    console.log("diff", computedDiff);
 
     const updatedData = buildUpdatedData();
     setIsSubmitting(true);
@@ -583,7 +582,7 @@ const DocumentComparison: React.FC = () => {
       });
       handleCloseConfirmModal();
       showToast("success", "Document submitted successfully.");
-      navigate("/dashboard");
+      setTimeout(() => navigate(-1), 800);
     } catch (error) {
       handleCloseConfirmModal();
       showToast(

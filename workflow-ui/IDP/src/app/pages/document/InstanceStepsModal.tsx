@@ -59,6 +59,7 @@ interface DocumentReviewParsedPayload {
   rows: DocumentReviewTableRow[];
   updatedBy: string;
   updatedAt: string;
+  hasChanges: boolean;
 }
 
 interface DocumentReviewDiffSnapshot {
@@ -310,7 +311,7 @@ const parseDocumentReviewPayload = (
       updatedAt?: unknown;
     };
 
-    if (Array.isArray(data.diff) && data.diff.length > 0) {
+    if (Array.isArray(data.diff)) {
       diffSnapshots.push({
         diff: data.diff,
         updatedBy: data.updatedBy,
@@ -337,12 +338,11 @@ const parseDocumentReviewPayload = (
     });
   });
 
-  if (rows.length === 0) return null;
-
   return {
     rows,
     updatedBy: toDisplayValue(latestSnapshot.updatedBy),
     updatedAt: formatUnixToLocaleDate(latestSnapshot.updatedAt),
+    hasChanges: rows.length > 0,
   };
 };
 
@@ -599,6 +599,30 @@ export const InstanceStepsModal: React.FC<InstanceStepsModalProps> = ({
                                       <JsonPayloadViewer
                                         payload={step.responsePayload}
                                       />
+                                    ) : !documentReviewData.hasChanges ? (
+                                      <div className="rounded-xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-8 text-center shadow-sm">
+                                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm">
+                                          <svg
+                                            className="h-6 w-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M8 7h8M8 12h8M10 17h4"
+                                            />
+                                          </svg>
+                                        </div>
+                                        <div className="mt-3 text-sm font-semibold text-slate-900">
+                                          No changes found
+                                        </div>
+                                        <p className="mt-1 text-xs text-slate-500">
+                                          This step did not have any field value updates.
+                                        </p>
+                                      </div>
                                     ) : (
                                       <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
                                         <table className="min-w-full divide-y divide-slate-200 text-xs">

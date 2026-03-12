@@ -576,10 +576,8 @@ const DocumentApproval: React.FC = () => {
   const handleFinalSubmit = useCallback(async () => {
     const computedDiff = computeDiff();
     setDiff(computedDiff);
-    console.log("diff", computedDiff);
 
     const updatedData = buildUpdatedData();
-    console.log("updatedData", updatedData);
     setIsSubmitting(true);
     try {
       await submitExtractedData({
@@ -1066,7 +1064,7 @@ const DocumentApproval: React.FC = () => {
   const handleFinalModalConfirm = () => {
     setFinalConfirmModal(false);
     showToast("success", "Document submitted successfully.");
-    setTimeout(() => navigate("/dashboard"), 800);
+    setTimeout(() => navigate(-1), 800);
   };
 
   return (
@@ -1625,7 +1623,7 @@ const DocumentApproval: React.FC = () => {
       />
       <FinalConfirmModal
         visible={finalConfirmModal}
-        onClose={() => setFinalConfirmModal(false)}
+        onClose={handleFinalModalConfirm}
         onConfirm={handleFinalModalConfirm}
         data={[finalChangeLog]}
       />
