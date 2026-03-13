@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import {
-  DifferenceData,
-  getValidateData,
+  getValidateDataApprover,
   submitExtractedData,
   updateExtractedData,
 } from "../../services/file-validate-service";
@@ -31,7 +30,9 @@ interface TableRow {
   page: number;
   review: boolean;
   overrideValue: string;
+  originalValue?: string;
   isSection?: boolean;
+  modified?: boolean;
 }
 
 interface RowEdit {
@@ -72,10 +73,9 @@ const ToastContainer: React.FC<{
       <div
         key={toast.id}
         className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium min-w-[280px] max-w-sm animate-slide-in transition-all
-          ${
-            toast.type === "success"
-              ? "bg-white border-emerald-200 text-emerald-800"
-              : "bg-white border-red-200 text-red-800"
+          ${toast.type === "success"
+            ? "bg-white border-emerald-200 text-emerald-800"
+            : "bg-white border-red-200 text-red-800"
           }`}
       >
         {toast.type === "success" ? (
@@ -193,8 +193,9 @@ const DocumentApproval: React.FC = () => {
   const pagesContainerRef = useRef<HTMLDivElement>(null);
   const renderTasksRef = useRef<Record<number, any>>({});
   const pdfjsRef = useRef<any>(null);
-  const [activeView, setActiveView] = useState("review");
   const [diffResponse, setDiffResponse] = useState<any>(null);
+  const [showOnlyDifferences, setShowOnlyDifferences] = useState(false);
+  console.log(showOnlyDifferences, "showOnlyDifferences")
 
   const DPI_SCALE = 2;
   const CONFIDENCE_THRESHOLD = 70;
@@ -240,74 +241,6 @@ const DocumentApproval: React.FC = () => {
       .replace(/([A-Z])/g, " $1")
       .replace(/^./, (s) => s.toUpperCase())
       .trim();
-
-  // const flattenData = (data: any): TableRow[] => {
-  //   const rows: TableRow[] = [];
-  //   const sections = data?.sections ?? data?.sections ?? {};
-  //   console.log('sections', sections)
-
-  //   const processSection = (sectionName: string, sectionData: any, page: number) => {
-  //     if (Array.isArray(sectionData)) {
-  //       sectionData.forEach((item, index) => {
-  //         Object.entries(item).forEach(([key, value]: [string, any]) => {
-  //           if (value && typeof value === 'object' && 'value' in value) {
-  //             console.log('value', value)
-  //             rows.push({
-  //               key: `${page}-${sectionName}-${key}-${index}`,
-  //               section: sectionName,
-  //               field: formatLabel(key),
-  //               fieldPath: key,
-  //               value: String(value.value),
-  //               confidence: value.confidence ?? null,
-  //               confidencePercent: formatConfidenceScore(value.confidence),
-  //               boundingBox: value.bounding_box || null,
-  //               page: value.page || page,
-  //               review: false,
-  //               overrideValue: '',
-  //             });
-  //           }
-  //         });
-  //       });
-  //     } else if (typeof sectionData === 'object') {
-  //       Object.entries(sectionData).forEach(([key, value]: [string, any]) => {
-  //         if (value && typeof value === 'object' && 'value' in value) {
-  //           rows.push({
-  //             key: `${page}-${sectionName}-${key}`,
-  //             section: sectionName,
-  //             field: formatLabel(key),
-  //             fieldPath: key,
-  //             value: String(value.value),
-  //             confidence: value.confidence ?? null,
-  //             confidencePercent: formatConfidenceScore(value.confidence),
-  //             boundingBox: value.bounding_box || null,
-  //             page: value.page || page,
-  //             review: false,
-  //             overrideValue: '',
-  //           });
-  //         }
-  //       });
-  //     }
-  //   };
-
-  //   Object.entries(sections).forEach(([sectionName, sectionData]) => {
-  //     rows.push({
-  //       key: `section-${sectionName}`,
-  //       field: sectionName.replace(/_/g, ' ').toUpperCase(),
-  //       value: '',
-  //       confidence: null,
-  //       confidencePercent: '-',
-  //       boundingBox: null,
-  //       page: 1,
-  //       review: false,
-  //       overrideValue: '',
-  //       isSection: true,
-  //     });
-  //     processSection(sectionName, sectionData, 1);
-  //   });
-
-  //   return rows;
-  // };
-
   const flattenData = (apiResponse: any): TableRow[] => {
     const rows: TableRow[] = [];
 
@@ -333,6 +266,12 @@ const DocumentApproval: React.FC = () => {
 
       Object.entries(obj).forEach(([key, value]: any) => {
         const fullPath = parentPath ? `${parentPath}.${key}` : key;
+        const normalize = (p: string) => p.replace(/\[(\d+)\]/g, ".$1");
+
+        const diffItem = diffResponse?.differences?.find(
+          (d: any) =>
+            normalize(d.path) === normalize(fullPath) && d.page === page
+        );
 
         // VALUE FIELD
         if (
@@ -356,6 +295,14 @@ const DocumentApproval: React.FC = () => {
             page,
             review: false,
             overrideValue: "",
+            originalValue:
+              value.originalValue ??
+              diffItem?.originalValue ??
+              String(value.value ?? ""),
+
+            modified:
+              value.modified ??
+              !!diffItem
           });
           return;
         }
@@ -367,22 +314,33 @@ const DocumentApproval: React.FC = () => {
           "confidence_score" in value &&
           "checked" in value
         ) {
+          const checkedValue = value.checked ? "Yes" : "No";
+
           rows.push({
             key: `p${page}-${sectionName}-${fullPath}`,
             section: sectionName,
             field: key,
             fieldPath: fullPath,
-            value: value.checked ? "Yes" : "No",
+            value: checkedValue,
             confidence: value.confidence_score ?? null,
             confidencePercent: formatConfidenceScore(value.confidence_score),
             boundingBox: value.bounding_box || null,
             page,
             review: false,
             overrideValue: "",
+
+            originalValue:
+              value.originalValue ??
+              diffItem?.originalValue ??
+              checkedValue,
+
+            modified:
+              value.modified ??
+              !!diffItem
           });
+
           return;
         }
-
         //  Recurse deeper
         processObject(value, sectionName, page, fullPath);
       });
@@ -428,7 +386,7 @@ const DocumentApproval: React.FC = () => {
           !row.isSection &&
           editedValues[row.key] &&
           editedValues[row.key].newValue !==
-            editedValues[row.key].originalValue,
+          editedValues[row.key].originalValue,
       )
       .map((row) => ({
         key: row.key,
@@ -441,33 +399,6 @@ const DocumentApproval: React.FC = () => {
         page: row.page,
       }));
   }, [apiResponse, editedValues]);
-
-  // const buildUpdatedData = useCallback((): any => {
-  //   if (!apiResponse) return {};
-  //   const diff = computeDiff();
-  //   if (diff.length === 0) return apiResponse?.extractedData?.data ?? apiResponse;
-
-  //   const updated = JSON.parse(JSON.stringify(apiResponse?.extractedData?.data ?? apiResponse));
-  //   const sections = updated?.sections ?? updated?.extractedData?.data?.sections ?? {};
-
-  //   console.log(updated);
-  //   console.log("**********************88");
-  //   console.log(sections);
-
-  //   diff.forEach(({ section, fieldPath, newValue }) => {
-  //     if (!section || !fieldPath || !sections[section]) return;
-  //     const sd = sections[section];
-  //     if (Array.isArray(sd)) {
-  //       sd.forEach((item: any) => {
-  //         if (item[fieldPath]?.value !== undefined) item[fieldPath].value = newValue;
-  //       });
-  //     } else if (sd?.[fieldPath]?.value !== undefined) {
-  //       sd[fieldPath].value = newValue;
-  //     }
-  //   });
-
-  //   return updated;
-  // }, [apiResponse, computeDiff]);
 
   const buildUpdatedData = useCallback((): any => {
     if (!apiResponse) return {};
@@ -521,10 +452,6 @@ const DocumentApproval: React.FC = () => {
             fieldObj.checked = Boolean(newValue);
           }
         }
-
-        // if (current?.[lastKey]?.value !== undefined) {
-        //   current[lastKey].value = newValue;
-        // }
       };
 
       updateField(pageObj[section], fieldPath);
@@ -617,42 +544,21 @@ const DocumentApproval: React.FC = () => {
       bytes[i] = binaryString.charCodeAt(i);
     return bytes;
   };
-
-  const loaddiffernce = async () => {
-    setIsDiffLoading(true);
-    try {
-      const data = (await DifferenceData({
-        submissionId,
-        documentId,
-        extractedDataKey,
-        originalFileKey,
-      })) as any;
-      setDiffResponse(data);
-      console.log("diff response", data);
-    } catch (error) {
-      setDataError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load extracted data",
-      );
-    } finally {
-      setIsDiffLoading(false);
-    }
-  };
-
   useEffect(() => {
     const loadData = async () => {
       setIsDataLoading(true);
       setDataError("");
       try {
-        const data = (await getValidateData({
+        const data = (await getValidateDataApprover({
           submissionId,
           documentId,
           extractedDataKey,
           originalFileKey,
         })) as any;
         setApiResponse(data);
+        setDiffResponse(data);
         //setApiResponse(dummydata)
+        console.log("api response", data);
         if (data?.encodedPdfData) setEncodedPdfData(data.encodedPdfData);
       } catch (error) {
         setDataError(
@@ -755,7 +661,7 @@ const DocumentApproval: React.FC = () => {
         }
       }
       setRenderedPages(newRenderedPages);
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -928,38 +834,6 @@ const DocumentApproval: React.FC = () => {
 
   const buildTableRows = (): TableRow[] =>
     !apiResponse ? [] : flattenData(apiResponse?.extractedData?.data);
-  // const getFilteredRows = (): TableRow[] => {
-  //   const allRows = buildTableRows();
-  //   return allRows.filter((row) => {
-  //     if (row.isSection) return true;
-  //     const score = row.confidence;
-  //     let mc = true;
-  //     if (confidenceFilter !== "all" && score !== null) {
-  //       switch (confidenceFilter) {
-  //         case "below_50":
-  //           mc = score < 50;
-  //           break;
-  //         case "50_75":
-  //           mc = score >= 50 && score < 75;
-  //           break;
-  //         case "75_80":
-  //           mc = score >= 75 && score < 80;
-  //           break;
-  //         case "80_85":
-  //           mc = score >= 80 && score < 85;
-  //           break;
-  //         case "85_90":
-  //           mc = score >= 85 && score < 90;
-  //           break;
-  //         case "90_above":
-  //           mc = score >= 90;
-  //           break;
-  //       }
-  //     }
-  //     const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
-  //     return mc && mp;
-  //   });
-  // };
   const getFilteredRows = (): TableRow[] => {
     const allRows = buildTableRows();
     const result: TableRow[] = [];
@@ -995,8 +869,15 @@ const DocumentApproval: React.FC = () => {
       }
 
       const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
-
-      return mc && mp;
+      //const md = showOnlyDifferences ? row.modified === true : true;
+      // const md = showOnlyDifferences ? row.modified === true : true;
+      const md = showOnlyDifferences
+  ? row.modified === true ||
+    (editedValues[row.key] &&
+      editedValues[row.key].newValue !== editedValues[row.key].originalValue)
+  : true;
+      console.log("row", row, "passesFilter", md)
+      return mc && mp && md;
     };
 
     const pushSectionIfValid = () => {
@@ -1022,10 +903,6 @@ const DocumentApproval: React.FC = () => {
     pushSectionIfValid();
 
     return result;
-  };
-  const handleAiTabClick = async () => {
-    setActiveView("ai");
-    await loaddiffernce();
   };
   const allRows = buildTableRows();
   const uniquePages = Array.from(
@@ -1105,83 +982,35 @@ const DocumentApproval: React.FC = () => {
             {apiResponse?.extractedData?.headerInfo?.documentType}
           </p>
         </div>
-
-        {/* Customer Name */}
-        {/* <div className="bg-[#FFFFFF] rounded-lg px-6 py-3 min-w-[200px]">
-        <p className="text-xs text-gray-500 mb-1">Customer Name</p>
-        <p className="text-sm font-medium text-gray-900">
-          {apiResponse?.extractedData?.headerInfo?.customerName}
-        </p>
-      </div> */}
       </div>
 
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div className="h-screen flex flex-col">
         <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
-          {/* Tabs */}
-          <div className="px-6 pt-3 flex items-center gap-6 border-b">
-            <button
-              onClick={() => setActiveView("review")}
-              className={`pb-2 text-sm font-medium border-b-2 ${
-                activeView === "review"
-                  ? "border-[#3C20F6] text-[#3C20F6]"
-                  : "border-transparent text-gray-500"
-              }`}
-            >
-              Document Review
-            </button>
-
-            <button
-              onClick={handleAiTabClick}
-              className={`pb-2 text-sm font-medium border-b-2 ${
-                activeView === "ai"
-                  ? "border-[#3C20F6] text-[#3C20F6]"
-                  : "border-transparent text-gray-500"
-              }`}
-            >
-              Modified Data
-            </button>
-          </div>
 
           {/* Header */}
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-[#E6DAFF] rounded-xl">
-                {activeView === "review" ? (
-                  <svg
-                    className="w-5 h-5 text-[#3C20F6]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-5 h-5 text-[#3C20F6]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                )}
+
+                <svg
+                  className="w-5 h-5 text-[#3C20F6]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+
               </div>
 
               <div>
                 <h1 className="text-[18px] font-semibold text-gray-900">
-                  {activeView === "review"
-                    ? "Document Review"
-                    : "Modified Data"}
+                  Document Review
                 </h1>
               </div>
             </div>
@@ -1199,33 +1028,68 @@ const DocumentApproval: React.FC = () => {
                 </p>
               )}
             </div>
+            <div className="flex items-center gap-3">
+              <button
+                className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                onClick={() => handleOpenConfirmModal("save")}
+                disabled={isSaveDisabled}
+              >
+                Save
+              </button>
 
-            {/* Buttons */}
-            {activeView === "review" && (
-              <div className="flex items-center gap-3">
-                <button
-                  className="border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                  onClick={() => handleOpenConfirmModal("save")}
-                  disabled={isSaveDisabled}
-                >
-                  Save
-                </button>
+              <button
+                className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                onClick={() => handleOpenConfirmModal("submit")}
+                disabled={isSubmitDisabled}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+          <h4 className="ml-5 text-[#3C20F6] ">Modified Data</h4>
+          <div
+            className="p-4"
+          >
 
-                <button
-                  className="relative border border-[#3C20F6] text-[#3C20F6] bg-[#E6DAFF] px-4 py-1 rounded-full text-sm font-medium hover:bg-[#d4c5ff] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                  onClick={() => handleOpenConfirmModal("submit")}
-                  disabled={isSubmitDisabled}
-                >
-                  Submit
-                </button>
+            {isDiffLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#3C20F6]" />
               </div>
+            ) : diffResponse?.differences?.length ? (
+              <table className="min-w-full border border-gray-200 text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="border px-3 py-2 text-left">Page</th>
+                    <th className="border px-3 py-2 text-left">Field</th>
+                    <th className="border px-3 py-2 text-left">Original Value</th>
+                    <th className="border px-3 py-2 text-left">Updated Value</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {diffResponse.differences.map((item: any, index: number) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="border px-3 py-2">{item.page}</td>
+                      <td className="border px-3 py-2">{item.path}</td>
+                      <td className="border px-3 py-2 text-black-500">
+                        {item.originalValue}
+                      </td>
+                      <td className="border px-3 py-2 text-black-500">
+                        {item.newValue}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <h4 className="text-gray-500">No Differences Found</h4>
             )}
           </div>
         </div>
 
         <div
-          className="flex flex-1 overflow-hidden gap-4 p-4"
-          style={{ display: activeView === "review" ? "flex" : "none" }}
+          className="flex  min-h-[500px] gap-4 p-4 overflow-hidden"
+        // style={{ display: activeView === "review" ? "flex" : "none" }}
         >
           <div className="w-[65%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
             <div className="border-b border-gray-100 px-4 py-3 flex-shrink-0">
@@ -1350,12 +1214,19 @@ const DocumentApproval: React.FC = () => {
                 {renderHighlightBox()}
               </div>
             </div>
+
           </div>
 
           <div className="w-[35%] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-            <h2 className="px-4 py-3 text-sm font-semibold text-[#4318FF]">
-              Mapped Data
-            </h2>
+            <div className="flex items-center justify-between px-4 py-3">
+              <h2 className="text-sm font-semibold text-[#4318FF]">
+                Mapped Data
+              </h2>
+
+              <span className="text-xs font-medium text-gray-600 mt-6 -mb-2" >
+                Show Differences
+              </span>
+            </div>
 
             <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
               <div className="relative flex-shrink-0">
@@ -1426,6 +1297,18 @@ const DocumentApproval: React.FC = () => {
                   </svg>
                 </div>
               </div>
+              <div className="flex items-center gap-2 ml-3">
+                <button
+                  onClick={() => setShowOnlyDifferences(!showOnlyDifferences)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${showOnlyDifferences ? "bg-[#3C20F6]" : "bg-gray-300"
+                    }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${showOnlyDifferences ? "translate-x-5" : "translate-x-1"
+                      }`}
+                  />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto overflow-x-hidden">
@@ -1462,20 +1345,23 @@ const DocumentApproval: React.FC = () => {
 
                     const currentDisplayValue =
                       editedValues[record.key]?.newValue ?? record.value;
+                    // const hasChanged =
+                    //   editedValues[record.key] &&
+                    //   editedValues[record.key].newValue !==
+                    //     editedValues[record.key].originalValue;
                     const hasChanged =
-                      editedValues[record.key] &&
-                      editedValues[record.key].newValue !==
-                        editedValues[record.key].originalValue;
 
+                      (record.modified === true ||
+                        (editedValues[record.key] &&
+                          editedValues[record.key].newValue !== editedValues[record.key].originalValue));
                     return (
                       <tr
                         key={record.key}
                         onClick={() => handleRowClick(record)}
-                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
-                          selectedField?.key === record.key
-                            ? "bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]"
-                            : "hover:bg-gray-50 border-l-4 border-l-transparent"
-                        }`}
+                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${selectedField?.key === record.key
+                          ? "bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]"
+                          : "hover:bg-gray-50 border-l-4 border-l-transparent"
+                          }`}
                       >
                         <td className="px-4 py-3">
                           <div className="flex justify-between items-center mb-1">
@@ -1483,17 +1369,16 @@ const DocumentApproval: React.FC = () => {
                               {record.field}
                             </span>
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
-                                record.confidence !== null &&
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${record.confidence !== null &&
                                 record.confidence >= 95
-                                  ? "bg-emerald-100"
-                                  : record.confidence !== null &&
-                                      record.confidence >= CONFIDENCE_THRESHOLD
-                                    ? "bg-amber-100"
-                                    : record.confidence !== null
-                                      ? "bg-red-100"
-                                      : "bg-gray-100"
-                              }`}
+                                ? "bg-emerald-100"
+                                : record.confidence !== null &&
+                                  record.confidence >= CONFIDENCE_THRESHOLD
+                                  ? "bg-amber-100"
+                                  : record.confidence !== null
+                                    ? "bg-red-100"
+                                    : "bg-gray-100"
+                                }`}
                             >
                               {record.confidencePercent !== "-"
                                 ? `${record.confidencePercent}%`
@@ -1520,20 +1405,19 @@ const DocumentApproval: React.FC = () => {
                               />
                             ) : (
                               <div className="flex-1 text-xs text-gray-700">
+                                
                                 {hasChanged ? (
                                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                                     <span className="line-through text-gray-500 text-left bg-[#F9B53642] truncate px-1 rounded">
-                                      {editedValues[record.key].originalValue}
+                                      {editedValues[record.key]?.originalValue ?? record.originalValue}
                                     </span>
+
                                     <div className="flex justify-center">
-                                      <img
-                                        src={arrowIcon}
-                                        alt="→"
-                                        className="w-5 h-5 object-contain"
-                                      />
+                                      <img src={arrowIcon} alt="→" className="w-5 h-5 object-contain" />
                                     </div>
+
                                     <span className="text-gray-800 text-right font-medium truncate">
-                                      {editedValues[record.key].newValue}
+                                      {editedValues[record.key]?.newValue ?? record.value}
                                     </span>
                                   </div>
                                 ) : (
@@ -1568,44 +1452,6 @@ const DocumentApproval: React.FC = () => {
         </div>
 
         {/* FIX 3b: always mounted, hidden via display:none instead of && conditional */}
-        <div
-          className="p-4"
-          style={{ display: activeView === "ai" ? "block" : "none" }}
-        >
-          {isDiffLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#3C20F6]" />
-            </div>
-          ) : diffResponse?.differences?.length ? (
-            <table className="min-w-full border border-gray-200 text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border px-3 py-2 text-left">Page</th>
-                  <th className="border px-3 py-2 text-left">Field</th>
-                  <th className="border px-3 py-2 text-left">Original Value</th>
-                  <th className="border px-3 py-2 text-left">Updated Value</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {diffResponse.differences.map((item: any, index: number) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="border px-3 py-2">{item.page}</td>
-                    <td className="border px-3 py-2">{item.path}</td>
-                    <td className="border px-3 py-2 text-black-500">
-                      {item.originalValue}
-                    </td>
-                    <td className="border px-3 py-2 text-black-500">
-                      {item.newValue}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <h4 className="text-gray-500">No Differences Found</h4>
-          )}
-        </div>
       </div>
 
       <ConfirmationModal
