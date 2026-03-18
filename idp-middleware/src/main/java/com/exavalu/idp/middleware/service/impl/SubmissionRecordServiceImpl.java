@@ -156,6 +156,9 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
 
         workflowLogClient.logWorkflowEvent(logRequest);
 
+        IdpDocumentEventDTO.DocumentData documentData = objectMapper.convertValue(extractedNode,
+                                                                                  IdpDocumentEventDTO.DocumentData.class);
+
         IdpDocumentEventDTO event = IdpDocumentEventDTO.builder()
                 .eventId(UUID.randomUUID().toString())
                 .submittedBy(updatedBy)
@@ -167,6 +170,7 @@ public class SubmissionRecordServiceImpl implements SubmissionRecordService {
                 .documentId(documentId)
                 .emailSubject("")
                 .formType(resolveDocumentType(fileMeta.getFileName()))
+                .data(documentData)
                 .build();
 
         publisherService.publishDocumentEvent(event);

@@ -64,8 +64,26 @@ public class JsonComparator {
 
                 if (COMPARE_KEYS.contains(field)) {
 
-                    String val1 = child1 != null && !child1.isNull() ? child1.asText() : null;
-                    String val2 = child2 != null && !child2.isNull() ? child2.asText() : null;
+//                    String val1 = child1 != null && !child1.isNull() ? child1.asText() : null;
+//                    String val2 = child2 != null && !child2.isNull() ? child2.asText() : null;
+//
+//                    if (!Objects.equals(val1, val2)) {
+//                        diffs.add(new JsonDiffDto(pageNumber, hierarchy, val1, val2));
+//                    }
+
+                    String val1;
+                    String val2;
+
+                    if ("checked".equals(field)) {
+
+                        val1 = (child1 != null && child1.asBoolean(false)) ? "Yes" : "No";
+                        val2 = (child2 != null && child2.asBoolean(false)) ? "Yes" : "No";
+
+                    } else {
+
+                        val1 = child1 != null && !child1.isNull() ? child1.asText() : null;
+                        val2 = child2 != null && !child2.isNull() ? child2.asText() : null;
+                    }
 
                     if (!Objects.equals(val1, val2)) {
                         diffs.add(new JsonDiffDto(pageNumber, hierarchy, val1, val2));
