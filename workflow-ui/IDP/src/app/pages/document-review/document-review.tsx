@@ -301,13 +301,37 @@ const DocumentComparison: React.FC = () => {
   //   return rows;
   // };
 
-  const parseSourceToBoundingBox = (source: string | undefined): BoundingBox | null => {
+  // Page dimensions (inches) keyed by page number — from Azure DI pages array
+  const getPageDimensions = (): Record<number, { width: number; height: number }> => {
+    const pages = apiResponse?.extractedData?.data?.result?.contents?.[0]?.pages ?? [];
+    const dims: Record<number, { width: number; height: number }> = {};
+    pages.forEach((p: any) => {
+      if (p.pageNumber != null) dims[p.pageNumber] = { width: p.width ?? 8.5, height: p.height ?? 11 };
+    });
+    return dims;
+  };
+
+  // Source format: "D(page,x1,y1,x2,y2,x3,y3,x4,y4)" — Azure DI 4-corner polygon in INCHES
+  // Multiple polygons separated by semicolons → take union bounding box
+  // Normalize to 0–1 fraction using page dimensions so renderHighlightBox works correctly
+  const parseSourceToBoundingBox = (source: string | undefined, pageNum: number): BoundingBox | null => {
     if (!source) return null;
-    // Source format: "D(pageNum,left,top,right,top,right,bottom,left,bottom)"
-    const match = source.match(/D\((\d+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+)\)/);
-    if (!match) return null;
-    const [, , x1, y1, x2, , , , y2] = match.map(Number);
-    return { left: x1, top: y1, width: x2 - x1, height: y2 - y1 };
+    const pageDims = getPageDimensions();
+    const dims = pageDims[pageNum] ?? { width: 8.5, height: 11 };
+    const pattern = /D\((\d+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+)\)/g;
+    const allX: number[] = [];
+    const allY: number[] = [];
+    let match;
+    while ((match = pattern.exec(source)) !== null) {
+      const coords = match.slice(2).map(Number); // x1,y1,x2,y2,x3,y3,x4,y4
+      coords.forEach((v, i) => (i % 2 === 0 ? allX : allY).push(v));
+    }
+    if (allX.length === 0) return null;
+    const left = Math.min(...allX) / dims.width;
+    const top = Math.min(...allY) / dims.height;
+    const right = Math.max(...allX) / dims.width;
+    const bottom = Math.max(...allY) / dims.height;
+    return { left, top, width: right - left, height: bottom - top };
   };
 
   const getLeafValue = (fieldObj: any): string => {
@@ -327,6 +351,7 @@ const DocumentComparison: React.FC = () => {
 
   const flattenData = (extractedData: any): TableRow[] => {
     const rows: TableRow[] = [];
+    // extractedData is already apiResponse.extractedData.data (passed from buildTableRows)
     const fields = extractedData?.result?.contents?.[0]?.fields;
     if (!fields) return rows;
 
@@ -354,8 +379,8 @@ const DocumentComparison: React.FC = () => {
         confidencePercent: fieldObj.confidence != null
           ? Math.round(fieldObj.confidence * 100).toString()
           : "-",
-        boundingBox: parseSourceToBoundingBox(fieldObj.source),
         page: getPageFromSource(fieldObj.source),
+        boundingBox: parseSourceToBoundingBox(fieldObj.source, getPageFromSource(fieldObj.source)),
         review: false,
         overrideValue: "",
       });
