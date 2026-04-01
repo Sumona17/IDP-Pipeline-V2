@@ -21,5 +21,5 @@ export const fetchMySubmissionList = async (): Promise<MySubmissionListResponse[
     { useCustomUrl: true }
   );
 
-  return response.data; 
+  return response.data;
 };

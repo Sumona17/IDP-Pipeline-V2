@@ -19,7 +19,7 @@
         "FunctionName": "arn:aws:lambda:us-east-1:611483457221:function:idp-document-classifier:$LATEST",
         "Payload": "{% $states.input %}"
       },
-      "Next": "Choice"
+      "Next": "EnvChoice"
     },
     "Choice": {
       "Type": "Choice",
@@ -76,6 +76,25 @@
     "Unknown_File": {
       "Type": "Pass",
       "Output": "{% {'route':'unknown'} %}",
+      "End": true
+    },
+    "EnvChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Condition": "{% $contains($lowercase($states.input.env),'demo') %}",
+          "Next": "Choice"
+        },
+        {
+          "Condition": "{% $contains($lowercase($states.input.env),'mvp') %}",
+          "Next": "MVP_Flow"
+        }
+      ],
+      "Default": "MVP_Flow"
+    },
+    "MVP_Flow": {
+      "Type": "Pass",
+      "Output": "{% {'route':'mvp_placeholder'} %}",
       "End": true
     }
   },

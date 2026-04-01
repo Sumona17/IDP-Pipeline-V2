@@ -9,6 +9,7 @@ import editIcon from "../../../../public/assets/icons/penicon.png";
 import arrowIcon from "../../../../public/assets/icons/arrowicon.png";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "../../components/confirmation-modal";
+import responseData from "./sample-extracted-data.json";
 
 interface BoundingBox {
   left: number;
@@ -70,10 +71,9 @@ const ToastContainer: React.FC<{
       <div
         key={toast.id}
         className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium min-w-[280px] max-w-sm animate-slide-in transition-all
-          ${
-            toast.type === "success"
-              ? "bg-white border-emerald-200 text-emerald-800"
-              : "bg-white border-red-200 text-red-800"
+          ${toast.type === "success"
+            ? "bg-white border-emerald-200 text-emerald-800"
+            : "bg-white border-red-200 text-red-800"
           }`}
       >
         {toast.type === "success" ? (
@@ -301,118 +301,104 @@ const DocumentComparison: React.FC = () => {
   //   return rows;
   // };
 
+  const parseSourceToBoundingBox = (source: string | undefined): BoundingBox | null => {
+    if (!source) return null;
+    // Source format: "D(pageNum,left,top,right,top,right,bottom,left,bottom)"
+    const match = source.match(/D\((\d+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+)\)/);
+    if (!match) return null;
+    const [, , x1, y1, x2, , , , y2] = match.map(Number);
+    return { left: x1, top: y1, width: x2 - x1, height: y2 - y1 };
+  };
+
+  const getLeafValue = (fieldObj: any): string => {
+    if (fieldObj.valueString !== undefined) return String(fieldObj.valueString);
+    if (fieldObj.valueBoolean !== undefined) return fieldObj.valueBoolean ? "Yes" : "No";
+    if (fieldObj.valueNumber !== undefined) return String(fieldObj.valueNumber);
+    if (fieldObj.valueDate !== undefined) return String(fieldObj.valueDate);
+    if (fieldObj.valueInteger !== undefined) return String(fieldObj.valueInteger);
+    return "";
+  };
+
+  const getPageFromSource = (source: string | undefined): number => {
+    if (!source) return 1;
+    const match = source.match(/D\((\d+),/);
+    return match ? Number(match[1]) : 1;
+  };
+
   const flattenData = (apiResponse: any): TableRow[] => {
     const rows: TableRow[] = [];
+    const fields = apiResponse?.extractedData?.data?.result?.contents?.[0]?.fields;
+    if (!fields) return rows;
 
-    if (!apiResponse || !apiResponse.sections) return rows;
-
-    const pages = apiResponse.sections;
-
-    const processObject = (
-      obj: any,
-      sectionName: string,
-      page: number,
-      parentPath: string = "",
-    ) => {
-      if (!obj || typeof obj !== "object") return;
-
-      // Handle arrays (Interest Rows, Subject Of Insurance Rows)
-      if (Array.isArray(obj)) {
-        obj.forEach((item, index) => {
-          processObject(item, sectionName, page, `${parentPath}[${index}]`);
+    const processLeafField = (key: string, fieldObj: any, sectionName: string, pathPrefix: string) => {
+      const type = fieldObj?.type;
+      // Skip nested objects/arrays — recurse into them instead
+      if (type === "object" && fieldObj.valueObject) {
+        processObject(fieldObj.valueObject, sectionName, `${pathPrefix}.${key}`);
+        return;
+      }
+      if (type === "array" && fieldObj.valueArray) {
+        fieldObj.valueArray.forEach((item: any, i: number) => {
+          if (item.valueObject) processObject(item.valueObject, sectionName, `${pathPrefix}.${key}[${i}]`);
         });
         return;
       }
-
-      Object.entries(obj).forEach(([key, value]: any) => {
-        const fullPath = parentPath ? `${parentPath}.${key}` : key;
-
-        // VALUE FIELD
-        if (
-          value &&
-          typeof value === "object" &&
-          "confidence_score" in value &&
-          "value" in value
-        ) {
-          rows.push({
-            key: `p${page}-${sectionName}-${fullPath}`,
-            section: sectionName,
-            field: key,
-            fieldPath: fullPath,
-            value:
-              value.value !== null && value.value !== undefined
-                ? String(value.value)
-                : "",
-            confidence: value.confidence_score ?? null,
-            confidencePercent: formatConfidenceScore(value.confidence_score),
-            boundingBox: value.bounding_box || null,
-            page,
-            review: false,
-            overrideValue: "",
-          });
-          return;
-        }
-
-        // CHECKBOX FIELD
-        if (
-          value &&
-          typeof value === "object" &&
-          "confidence_score" in value &&
-          "checked" in value
-        ) {
-          rows.push({
-            key: `p${page}-${sectionName}-${fullPath}`,
-            section: sectionName,
-            field: key,
-            fieldPath: fullPath,
-            value: value.checked ? "Yes" : "No",
-            confidence: value.confidence_score ?? null,
-            confidencePercent: formatConfidenceScore(value.confidence_score),
-            boundingBox: value.bounding_box || null,
-            page,
-            review: false,
-            overrideValue: "",
-          });
-          return;
-        }
-
-        //  Recurse deeper
-        processObject(value, sectionName, page, fullPath);
+      const fullPath = `${pathPrefix}.${key}`;
+      rows.push({
+        key: `${sectionName}-${fullPath}`,
+        section: sectionName,
+        field: key,
+        fieldPath: fullPath,
+        value: getLeafValue(fieldObj),
+        confidence: fieldObj.confidence != null ? fieldObj.confidence * 100 : null,
+        confidencePercent: fieldObj.confidence != null
+          ? Math.round(fieldObj.confidence * 100).toString()
+          : "-",
+        boundingBox: parseSourceToBoundingBox(fieldObj.source),
+        page: getPageFromSource(fieldObj.source),
+        review: false,
+        overrideValue: "",
       });
     };
 
-    // LOOP THROUGH PAGES
-    pages.forEach((pageObj: any, pageIndex: number) => {
-      const page = pageObj.page ?? pageIndex + 1;
-
-      // Remove page key before iterating sections
-      const { page: _, ...sections } = pageObj;
-
-      Object.entries(sections).forEach(([sectionName, sectionData]: any) => {
-        if (!sectionData || typeof sectionData !== "object") return;
-
-        // SECTION HEADER ROW
-        rows.push({
-          key: `section-p${page}-${sectionName}`,
-          section: sectionName,
-          field: `${sectionName}`,
-          fieldPath: "",
-          value: "",
-          confidence: null,
-          confidencePercent: "-",
-          boundingBox: null,
-          page,
-          review: false,
-          overrideValue: "",
-          isSection: true,
-        });
-
-        processObject(sectionData, sectionName, page);
+    const processObject = (obj: any, sectionName: string, pathPrefix: string) => {
+      if (!obj || typeof obj !== "object") return;
+      Object.entries(obj).forEach(([key, value]: any) => {
+        processLeafField(key, value, sectionName, pathPrefix);
       });
+    };
+
+    Object.entries(fields).forEach(([sectionName, sectionData]: any) => {
+      if (!sectionData) return;
+
+      // Section header row
+      rows.push({
+        key: `section-${sectionName}`,
+        section: sectionName,
+        field: sectionName,
+        fieldPath: "",
+        value: "",
+        confidence: null,
+        confidencePercent: "-",
+        boundingBox: null,
+        page: 1,
+        review: false,
+        overrideValue: "",
+        isSection: true,
+      });
+
+      if (sectionData.type === "object" && sectionData.valueObject) {
+        processObject(sectionData.valueObject, sectionName, sectionName);
+      } else if (sectionData.type === "array" && sectionData.valueArray) {
+        sectionData.valueArray.forEach((item: any, i: number) => {
+          if (item.valueObject) processObject(item.valueObject, sectionName, `${sectionName}[${i}]`);
+        });
+      }
     });
 
     return rows;
   };
+
   const computeDiff = useCallback((): DiffEntry[] => {
     if (!apiResponse) return [];
     return flattenData(apiResponse.extractedData?.data)
@@ -421,7 +407,7 @@ const DocumentComparison: React.FC = () => {
           !row.isSection &&
           editedValues[row.key] &&
           editedValues[row.key].newValue !==
-            editedValues[row.key].originalValue,
+          editedValues[row.key].originalValue,
       )
       .map((row) => ({
         key: row.key,
@@ -613,28 +599,17 @@ const DocumentComparison: React.FC = () => {
       setIsDataLoading(true);
       setDataError("");
       try {
-        const data = (await getValidateData({
-          submissionId,
-          documentId,
-          extractedDataKey,
-          originalFileKey,
-        })) as any;
-        setApiResponse(data);
-        //setApiResponse(dummydata)
-        if (data?.encodedPdfData) setEncodedPdfData(data.encodedPdfData);
+        const data = responseData as any;   // ← use local JSON
+        setApiResponse(data.data);          // ← unwrap the top-level "data" key
+        if (data.data?.encodedPdfData) setEncodedPdfData(data.data.encodedPdfData);
       } catch (error) {
-        setDataError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load extracted data",
-        );
+        setDataError("Failed to load extracted data");
       } finally {
         setIsDataLoading(false);
       }
     };
-    if (extractedDataKey && originalFileKey) loadData();
-  }, [extractedDataKey, originalFileKey]);
-
+    loadData();
+  }, []);
   useEffect(() => {
     if (!encodedPdfData) return;
     const loadPdf = async () => {
@@ -723,7 +698,7 @@ const DocumentComparison: React.FC = () => {
         }
       }
       setRenderedPages(newRenderedPages);
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -1350,17 +1325,16 @@ const DocumentComparison: React.FC = () => {
                     const hasChanged =
                       editedValues[record.key] &&
                       editedValues[record.key].newValue !==
-                        editedValues[record.key].originalValue;
+                      editedValues[record.key].originalValue;
 
                     return (
                       <tr
                         key={record.key}
                         onClick={() => handleRowClick(record)}
-                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${
-                          selectedField?.key === record.key
-                            ? "bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]"
-                            : "hover:bg-gray-50 border-l-4 border-l-transparent"
-                        }`}
+                        className={`cursor-pointer transition-all duration-150 ${getConfidenceBg(record.confidence)} ${selectedField?.key === record.key
+                          ? "bg-[#E6DAFF] border-l-4 border-l-[#3C20F6]"
+                          : "hover:bg-gray-50 border-l-4 border-l-transparent"
+                          }`}
                       >
                         <td className="px-4 py-3">
                           <div className="flex justify-between items-center mb-1">
@@ -1368,17 +1342,16 @@ const DocumentComparison: React.FC = () => {
                               {record.field}
                             </span>
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${
-                                record.confidence !== null &&
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getConfidenceColor(record.confidence)} ${record.confidence !== null &&
                                 record.confidence >= 95
-                                  ? "bg-emerald-100"
-                                  : record.confidence !== null &&
-                                      record.confidence >= CONFIDENCE_THRESHOLD
-                                    ? "bg-amber-100"
-                                    : record.confidence !== null
-                                      ? "bg-red-100"
-                                      : "bg-gray-100"
-                              }`}
+                                ? "bg-emerald-100"
+                                : record.confidence !== null &&
+                                  record.confidence >= CONFIDENCE_THRESHOLD
+                                  ? "bg-amber-100"
+                                  : record.confidence !== null
+                                    ? "bg-red-100"
+                                    : "bg-gray-100"
+                                }`}
                             >
                               {record.confidencePercent !== "-"
                                 ? `${record.confidencePercent}%`

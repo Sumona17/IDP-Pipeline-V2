@@ -17,7 +17,7 @@ interface FetchAllSubmissionApiResponse {
 
 export const fetchAllSubmissions = async (): Promise<FetchAllSubmissionResponse[]> => {
   const response = await apiClient.get<FetchAllSubmissionApiResponse>(
-    `${baseUrl}/api/v1/submissions/fetchAllSubmissions`,
+    `${baseUrl}/api/v1/submissions/fetchAllSubmissions?env=mvp`,
     { useCustomUrl: true }
   );
 
