@@ -325,9 +325,9 @@ const DocumentComparison: React.FC = () => {
     return match ? Number(match[1]) : 1;
   };
 
-  const flattenData = (apiResponse: any): TableRow[] => {
+  const flattenData = (extractedData: any): TableRow[] => {
     const rows: TableRow[] = [];
-    const fields = apiResponse?.extractedData?.data?.result?.contents?.[0]?.fields;
+    const fields = extractedData?.result?.contents?.[0]?.fields;
     if (!fields) return rows;
 
     const processLeafField = (key: string, fieldObj: any, sectionName: string, pathPrefix: string) => {
