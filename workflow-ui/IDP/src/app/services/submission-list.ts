@@ -17,7 +17,7 @@ interface MySubmissionListApiResponse {
 
 export const fetchMySubmissionList = async (): Promise<MySubmissionListResponse[]> => {
   const response = await apiClient.get<MySubmissionListApiResponse>(
-    `${baseUrl}/api/v1/inreviewsubmissions/mySubmissionList`,
+    `${baseUrl}/api/v1/inreviewsubmissions/mySubmissionList?env=mvp`,
     { useCustomUrl: true }
   );
 

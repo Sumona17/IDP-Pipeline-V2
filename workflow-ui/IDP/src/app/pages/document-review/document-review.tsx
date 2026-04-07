@@ -9,7 +9,7 @@ import editIcon from "../../../../public/assets/icons/penicon.png";
 import arrowIcon from "../../../../public/assets/icons/arrowicon.png";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "../../components/confirmation-modal";
-import responseData from "./sample-extracted-data.json";
+
 
 interface BoundingBox {
   left: number;
@@ -174,6 +174,8 @@ const DocumentComparison: React.FC = () => {
   const [editedValues, setEditedValues] = useState<Record<string, EditedEntry>>(
     {},
   );
+  const [pageRotations, setPageRotations] = useState<Record<number, number>>({});
+  const [pdfPageDimsIn, setPdfPageDimsIn] = useState<Record<number, { width: number; height: number }>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastIdRef = useRef(0);
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
@@ -223,6 +225,19 @@ const DocumentComparison: React.FC = () => {
     return "bg-red-50";
   };
 
+  const transformBBoxForRotation = (bbox: BoundingBox, rotation: number): BoundingBox => {
+    const { left, top, width, height } = bbox;
+    switch (rotation) {
+      case 90:
+        return { left: top, top: 1 - left - width, width: height, height: width };
+      case 180:
+        return { left: 1 - left - width, top: 1 - top - height, width, height };
+      case 270:
+        return { left: 1 - top - height, top: left, width: height, height: width };
+      default:
+        return bbox;
+    }
+  };
   const getHighlightColor = (confidenceScore: number | null): string => {
     const score = Number(confidenceScore);
     return !score || score < CONFIDENCE_THRESHOLD ? "#EF4444" : "#3C20F6";
@@ -233,6 +248,64 @@ const DocumentComparison: React.FC = () => {
       .replace(/([A-Z])/g, " $1")
       .replace(/^./, (s) => s.toUpperCase())
       .trim();
+
+  const parseJsonIfString = (value: any): any => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) return value;
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return value;
+    }
+  };
+
+  const getByPath = (obj: any, path: string): any => {
+    if (!path) return obj;
+    return path
+      .split(".")
+      .reduce((acc, key) => (acc && typeof acc === "object" ? acc[key] : undefined), obj);
+  };
+
+  const resolveExtractedData = (source: any): any => {
+    const parsedSource = parseJsonIfString(source);
+    const candidatePaths = [
+      "extractedData.data",
+      "extractedData.data.data",
+      "extractedData.extractedDataJson",
+      "extractedDataJson",
+      "data.extractedData.data",
+      "data.extractedData.data.data",
+      "data.extractedData.extractedDataJson",
+      "data.extractedDataJson",
+      "data.data",
+      "extractedData",
+      "data.extractedData",
+      "data",
+      "",
+    ];
+
+    const candidates = candidatePaths.map((path) =>
+      parseJsonIfString(getByPath(parsedSource, path)),
+    );
+
+    return (
+      candidates.find(
+        (candidate) =>
+          candidate &&
+          typeof candidate === "object" &&
+          (candidate?.result?.contents?.[0]?.fields || candidate?.sections),
+      ) ??
+      null
+    );
+  };
+
+  const normalizeConfidence = (confidence: unknown): number | null => {
+    if (confidence === null || confidence === undefined) return null;
+    const numeric = Number(confidence);
+    if (Number.isNaN(numeric)) return null;
+    return numeric <= 1 ? numeric * 100 : numeric;
+  };
 
   // const flattenData = (data: any): TableRow[] => {
   //   const rows: TableRow[] = [];
@@ -303,30 +376,39 @@ const DocumentComparison: React.FC = () => {
 
   // Page dimensions (inches) keyed by page number — from Azure DI pages array
   const getPageDimensions = (): Record<number, { width: number; height: number }> => {
-    const pages = apiResponse?.extractedData?.data?.result?.contents?.[0]?.pages ?? [];
+    const extractedData = resolveExtractedData(apiResponse);
+    const pages = extractedData?.result?.contents?.[0]?.pages ?? [];
     const dims: Record<number, { width: number; height: number }> = {};
     pages.forEach((p: any) => {
-      if (p.pageNumber != null) dims[p.pageNumber] = { width: p.width ?? 8.5, height: p.height ?? 11 };
+      if (p.pageNumber != null) {
+        dims[p.pageNumber] = { width: p.width ?? 8.5, height: p.height ?? 11 };
+      }
     });
     return dims;
   };
 
-  // Source format: "D(page,x1,y1,x2,y2,x3,y3,x4,y4)" — Azure DI 4-corner polygon in INCHES
-  // Multiple polygons separated by semicolons → take union bounding box
-  // Normalize to 0–1 fraction using page dimensions so renderHighlightBox works correctly
-  const parseSourceToBoundingBox = (source: string | undefined, pageNum: number): BoundingBox | null => {
+  const parseSourceToBoundingBox = (
+    source: string | undefined,
+    pageNum: number,
+  ): BoundingBox | null => {
     if (!source) return null;
-    const pageDims = getPageDimensions();
-    const dims = pageDims[pageNum] ?? { width: 8.5, height: 11 };
-    const pattern = /D\((\d+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+)\)/g;
+
+    const dims: { width: number; height: number } =
+      pdfPageDimsIn[pageNum] ??
+      getPageDimensions()[pageNum] ??
+      { width: 8.5, height: 11 };
+
+    const pattern =
+      /D\((\d+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+)\)/g;
     const allX: number[] = [];
     const allY: number[] = [];
     let match;
     while ((match = pattern.exec(source)) !== null) {
-      const coords = match.slice(2).map(Number); // x1,y1,x2,y2,x3,y3,x4,y4
+      const coords = match.slice(2).map(Number);
       coords.forEach((v, i) => (i % 2 === 0 ? allX : allY).push(v));
     }
     if (allX.length === 0) return null;
+
     const left = Math.min(...allX) / dims.width;
     const top = Math.min(...allY) / dims.height;
     const right = Math.max(...allX) / dims.width;
@@ -335,72 +417,334 @@ const DocumentComparison: React.FC = () => {
   };
 
   const getLeafValue = (fieldObj: any): string => {
-    if (fieldObj.valueString !== undefined) return String(fieldObj.valueString);
+    if (fieldObj === null || fieldObj === undefined) return "";
+    if (typeof fieldObj !== "object") return String(fieldObj);
+    if (fieldObj.valueString !== undefined) return String(fieldObj.valueString ?? "");
     if (fieldObj.valueBoolean !== undefined) return fieldObj.valueBoolean ? "Yes" : "No";
-    if (fieldObj.valueNumber !== undefined) return String(fieldObj.valueNumber);
-    if (fieldObj.valueDate !== undefined) return String(fieldObj.valueDate);
-    if (fieldObj.valueInteger !== undefined) return String(fieldObj.valueInteger);
+    if (fieldObj.valueNumber !== undefined) return String(fieldObj.valueNumber ?? "");
+    if (fieldObj.valueDate !== undefined) return String(fieldObj.valueDate ?? "");
+    if (fieldObj.valueInteger !== undefined) return String(fieldObj.valueInteger ?? "");
+    if (fieldObj.value !== undefined) return String(fieldObj.value ?? "");
+    if (fieldObj.checked !== undefined) return fieldObj.checked ? "Yes" : "No";
+    if (fieldObj.content !== undefined) return String(fieldObj.content ?? "");
     return "";
   };
 
   const getPageFromSource = (source: string | undefined): number => {
     if (!source) return 1;
-    const match = source.match(/D\((\d+),/);
+    const match = source.match(/D\((\d+),/) ?? source.match(/\/pages\/(\d+)/);
     return match ? Number(match[1]) : 1;
   };
 
-  const flattenData = (extractedData: any): TableRow[] => {
+  const buildGenericRows = (root: any): TableRow[] => {
     const rows: TableRow[] = [];
-    // extractedData is already apiResponse.extractedData.data (passed from buildTableRows)
-    const fields = extractedData?.result?.contents?.[0]?.fields;
-    if (!fields) return rows;
+    const sectionKeys = new Set<string>();
+    const MAX_ROWS = 500;
+    const SKIP_KEYS = new Set([
+      "encodedPdfData",
+      "markdown",
+      "spans",
+      "words",
+      "lines",
+      "paragraphs",
+      "tables",
+      "figures",
+      "elements",
+      "boundingRegions",
+      "polygon",
+      "contentFormat",
+      "stringIndexType",
+      "apiVersion",
+      "analyzerId",
+      "createdAt",
+      "usage",
+      "warnings",
+    ]);
 
-    const processLeafField = (key: string, fieldObj: any, sectionName: string, pathPrefix: string) => {
-      const type = fieldObj?.type;
-      // Skip nested objects/arrays — recurse into them instead
-      if (type === "object" && fieldObj.valueObject) {
-        processObject(fieldObj.valueObject, sectionName, `${pathPrefix}.${key}`);
+    const ensureSection = (sectionName: string) => {
+      const sectionLabel = formatLabel(sectionName || "Mapped Data");
+      const sectionKey = `section-generic-${sectionLabel}`;
+      if (sectionKeys.has(sectionKey)) return sectionLabel;
+      sectionKeys.add(sectionKey);
+      rows.push({
+        key: sectionKey,
+        section: sectionLabel,
+        field: sectionLabel,
+        fieldPath: "",
+        value: "",
+        confidence: null,
+        confidencePercent: "-",
+        boundingBox: null,
+        page: 1,
+        review: false,
+        overrideValue: "",
+        isSection: true,
+      });
+      return sectionLabel;
+    };
+
+    const walk = (
+      node: any,
+      path: string[],
+      sectionHint: string,
+      depth: number,
+    ) => {
+      if (rows.length >= MAX_ROWS || depth > 12 || node === null || node === undefined) {
         return;
       }
-      if (type === "array" && fieldObj.valueArray) {
-        fieldObj.valueArray.forEach((item: any, i: number) => {
-          if (item.valueObject) processObject(item.valueObject, sectionName, `${pathPrefix}.${key}[${i}]`);
+
+      if (Array.isArray(node)) {
+        node.forEach((item, index) => {
+          walk(item, [...path, `[${index}]`], sectionHint, depth + 1);
         });
         return;
       }
-      const fullPath = `${pathPrefix}.${key}`;
-      rows.push({
-        key: `${sectionName}-${fullPath}`,
-        section: sectionName,
-        field: key,
-        fieldPath: fullPath,
-        value: getLeafValue(fieldObj),
-        confidence: fieldObj.confidence != null ? fieldObj.confidence * 100 : null,
-        confidencePercent: fieldObj.confidence != null
-          ? Math.round(fieldObj.confidence * 100).toString()
-          : "-",
-        page: getPageFromSource(fieldObj.source),
-        boundingBox: parseSourceToBoundingBox(fieldObj.source, getPageFromSource(fieldObj.source)),
-        review: false,
-        overrideValue: "",
+
+      if (typeof node !== "object") return;
+
+      const hasFieldValue =
+        "valueString" in node ||
+        "valueBoolean" in node ||
+        "valueNumber" in node ||
+        "valueDate" in node ||
+        "valueInteger" in node ||
+        "value" in node ||
+        "checked" in node ||
+        ("confidence" in node && ("source" in node || "content" in node));
+
+      if (hasFieldValue) {
+        const fieldPath = path.join(".").replace(/\.\[/g, "[");
+        const rawField = (path[path.length - 1] || "value").replace(/\[\d+\]/g, "");
+        const page = node.page || getPageFromSource(node.source);
+        const confidence = normalizeConfidence(node.confidence ?? node.confidence_score);
+        const value = getLeafValue(node);
+        const section = ensureSection(sectionHint);
+
+        rows.push({
+          key: `generic-${page}-${fieldPath}-${rows.length}`,
+          section,
+          field: formatLabel(rawField || "value"),
+          fieldPath,
+          value,
+          confidence,
+          confidencePercent: formatConfidenceScore(confidence),
+          boundingBox: node.bounding_box || parseSourceToBoundingBox(node.source, page),
+          page,
+          review: false,
+          overrideValue: "",
+        });
+        return;
+      }
+
+      Object.entries(node).forEach(([key, value]) => {
+        if (SKIP_KEYS.has(key)) return;
+        if (typeof value === "string" && value.length > 2000) return;
+        const nextSection = path.length === 0 ? key : sectionHint;
+        walk(value, [...path, key], nextSection, depth + 1);
       });
     };
 
-    const processObject = (obj: any, sectionName: string, pathPrefix: string) => {
-      if (!obj || typeof obj !== "object") return;
-      Object.entries(obj).forEach(([key, value]: any) => {
-        processLeafField(key, value, sectionName, pathPrefix);
+    walk(root, [], "Mapped Data", 0);
+    return rows;
+  };
+
+  const flattenData = (rawExtractedData: any): TableRow[] => {
+    const rows: TableRow[] = [];
+    const extractedData =
+      resolveExtractedData(rawExtractedData) ?? parseJsonIfString(rawExtractedData);
+    if (!extractedData || typeof extractedData !== "object") return rows;
+
+    // Dynamic schema (Azure DI style)
+    const fields = extractedData?.result?.contents?.[0]?.fields;
+    if (fields && typeof fields === "object") {
+      const processLeafField = (
+        key: string,
+        fieldObj: any,
+        sectionName: string,
+        pathPrefix: string,
+      ) => {
+        const type = fieldObj?.type;
+        if (type === "object" && fieldObj.valueObject) {
+          processObject(fieldObj.valueObject, sectionName, `${pathPrefix}.${key}`);
+          return;
+        }
+        if (type === "array" && fieldObj.valueArray) {
+          fieldObj.valueArray.forEach((item: any, i: number) => {
+            if (item.valueObject) {
+              processObject(item.valueObject, sectionName, `${pathPrefix}.${key}[${i}]`);
+            }
+          });
+          return;
+        }
+
+        const fullPath = `${pathPrefix}.${key}`;
+        const normalizedConfidence = normalizeConfidence(fieldObj?.confidence);
+        const page = getPageFromSource(fieldObj?.source);
+
+        rows.push({
+          key: `${sectionName}-${fullPath}`,
+          section: sectionName,
+          field: key,
+          fieldPath: fullPath,
+          value: getLeafValue(fieldObj),
+          confidence: normalizedConfidence,
+          confidencePercent: formatConfidenceScore(normalizedConfidence),
+          page,
+          boundingBox: parseSourceToBoundingBox(fieldObj?.source, page),
+          review: false,
+          overrideValue: "",
+        });
+      };
+
+      const processObject = (obj: any, sectionName: string, pathPrefix: string) => {
+        if (!obj || typeof obj !== "object") return;
+        Object.entries(obj).forEach(([key, value]: any) => {
+          processLeafField(key, value, sectionName, pathPrefix);
+        });
+      };
+
+      Object.entries(fields).forEach(([sectionName, sectionData]: any) => {
+        if (!sectionData) return;
+
+        rows.push({
+          key: `section-${sectionName}`,
+          section: sectionName,
+          field: sectionName,
+          fieldPath: "",
+          value: "",
+          confidence: null,
+          confidencePercent: "-",
+          boundingBox: null,
+          page: 1,
+          review: false,
+          overrideValue: "",
+          isSection: true,
+        });
+
+        if (sectionData.type === "object" && sectionData.valueObject) {
+          processObject(sectionData.valueObject, sectionName, sectionName);
+        } else if (sectionData.type === "array" && sectionData.valueArray) {
+          sectionData.valueArray.forEach((item: any, i: number) => {
+            if (item.valueObject) {
+              processObject(item.valueObject, sectionName, `${sectionName}[${i}]`);
+            }
+          });
+        } else {
+          const normalizedConfidence = normalizeConfidence(sectionData?.confidence);
+          const page = getPageFromSource(sectionData?.source);
+          rows.push({
+            key: `${sectionName}-${sectionName}`,
+            section: sectionName,
+            field: sectionName,
+            fieldPath: sectionName,
+            value: getLeafValue(sectionData),
+            confidence: normalizedConfidence,
+            confidencePercent: formatConfidenceScore(normalizedConfidence),
+            page,
+            boundingBox: parseSourceToBoundingBox(sectionData?.source, page),
+            review: false,
+            overrideValue: "",
+          });
+        }
+      });
+
+      return rows;
+    }
+
+    // Legacy schema (static sections)
+    const legacySections = extractedData?.sections;
+    if (!legacySections) return buildGenericRows(extractedData);
+
+    const pushLegacyLeafRows = (
+      sectionName: string,
+      sectionData: any,
+      fallbackPage: number,
+      parentPath = "",
+    ) => {
+      if (!sectionData || typeof sectionData !== "object") return;
+
+      if (Array.isArray(sectionData)) {
+        sectionData.forEach((item, index) => {
+          pushLegacyLeafRows(
+            sectionName,
+            item,
+            fallbackPage,
+            parentPath ? `${parentPath}[${index}]` : `[${index}]`,
+          );
+        });
+        return;
+      }
+
+      Object.entries(sectionData).forEach(([key, value]: [string, any]) => {
+        const fullPath = parentPath ? `${parentPath}.${key}` : key;
+
+        if (
+          value &&
+          typeof value === "object" &&
+          ("value" in value || "checked" in value)
+        ) {
+          const normalizedConfidence = normalizeConfidence(
+            value.confidence ?? value.confidence_score,
+          );
+          const page = value.page || fallbackPage || 1;
+
+          rows.push({
+            key: `p${page}-${sectionName}-${fullPath}`,
+            section: sectionName,
+            field: formatLabel(key),
+            fieldPath: fullPath,
+            value:
+              value.value !== undefined
+                ? String(value.value ?? "")
+                : value.checked
+                  ? "Yes"
+                  : "No",
+            confidence: normalizedConfidence,
+            confidencePercent: formatConfidenceScore(normalizedConfidence),
+            boundingBox: value.bounding_box || null,
+            page,
+            review: false,
+            overrideValue: "",
+          });
+          return;
+        }
+
+        pushLegacyLeafRows(sectionName, value, fallbackPage, fullPath);
       });
     };
 
-    Object.entries(fields).forEach(([sectionName, sectionData]: any) => {
-      if (!sectionData) return;
+    if (Array.isArray(legacySections)) {
+      legacySections.forEach((pageObj: any, pageIndex: number) => {
+        if (!pageObj || typeof pageObj !== "object") return;
+        const page = pageObj.page ?? pageIndex + 1;
+        const { page: _ignoredPage, ...pageSections } = pageObj;
 
-      // Section header row
+        Object.entries(pageSections).forEach(([sectionName, sectionData]) => {
+          rows.push({
+            key: `section-p${page}-${sectionName}`,
+            section: sectionName,
+            field: sectionName,
+            fieldPath: "",
+            value: "",
+            confidence: null,
+            confidencePercent: "-",
+            boundingBox: null,
+            page,
+            review: false,
+            overrideValue: "",
+            isSection: true,
+          });
+          pushLegacyLeafRows(sectionName, sectionData, page);
+        });
+      });
+      return rows;
+    }
+
+    Object.entries(legacySections).forEach(([sectionName, sectionData]) => {
       rows.push({
         key: `section-${sectionName}`,
         section: sectionName,
-        field: sectionName,
+        field: sectionName.replace(/_/g, " ").toUpperCase(),
         fieldPath: "",
         value: "",
         confidence: null,
@@ -412,21 +756,14 @@ const DocumentComparison: React.FC = () => {
         isSection: true,
       });
 
-      if (sectionData.type === "object" && sectionData.valueObject) {
-        processObject(sectionData.valueObject, sectionName, sectionName);
-      } else if (sectionData.type === "array" && sectionData.valueArray) {
-        sectionData.valueArray.forEach((item: any, i: number) => {
-          if (item.valueObject) processObject(item.valueObject, sectionName, `${sectionName}[${i}]`);
-        });
-      }
+      pushLegacyLeafRows(sectionName, sectionData, 1);
     });
 
-    return rows;
+    return rows.length > 0 ? rows : buildGenericRows(extractedData);
   };
-
   const computeDiff = useCallback((): DiffEntry[] => {
     if (!apiResponse) return [];
-    return flattenData(apiResponse.extractedData?.data)
+    return flattenData(apiResponse)
       .filter(
         (row) =>
           !row.isSection &&
@@ -624,17 +961,44 @@ const DocumentComparison: React.FC = () => {
       setIsDataLoading(true);
       setDataError("");
       try {
-        const data = responseData as any;   // ← use local JSON
-        setApiResponse(data.data);          // ← unwrap the top-level "data" key
-        if (data.data?.encodedPdfData) setEncodedPdfData(data.data.encodedPdfData);
+        const response = (await getValidateData({
+          submissionId,
+          documentId,
+          extractedDataKey,
+          originalFileKey,
+        })) as any;
+        // The API wraps its payload in a top-level "data" key — unwrap it
+        // so apiResponse matches the same shape the static JSON provided.
+        const baseData = parseJsonIfString(response?.data ?? response);
+        let data = baseData;
+        if (baseData && typeof baseData === "object") {
+          const normalizedExtractedData = parseJsonIfString(baseData.extractedData);
+          data = {
+            ...baseData,
+            extractedData:
+              normalizedExtractedData &&
+                typeof normalizedExtractedData === "object"
+                ? {
+                  ...normalizedExtractedData,
+                  data: parseJsonIfString(normalizedExtractedData.data),
+                }
+                : normalizedExtractedData,
+          };
+        }
+        setApiResponse(data);
+        if (data?.encodedPdfData) setEncodedPdfData(data.encodedPdfData);
       } catch (error) {
-        setDataError("Failed to load extracted data");
+        setDataError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load extracted data",
+        );
       } finally {
         setIsDataLoading(false);
       }
     };
-    loadData();
-  }, []);
+    if (extractedDataKey && originalFileKey) loadData();
+  }, [extractedDataKey, originalFileKey]);
   useEffect(() => {
     if (!encodedPdfData) return;
     const loadPdf = async () => {
@@ -655,6 +1019,17 @@ const DocumentComparison: React.FC = () => {
           useSystemFonts: true,
         });
         const pdf = await loadingTask.promise;
+
+        const dimsMap: Record<number, { width: number; height: number }> = {};
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const p = await pdf.getPage(i);
+          const angle = p.rotate || 0;
+          // Swap width/height for 90° or 270° rotated pages so dims are in display space
+          const w = (angle === 90 || angle === 270) ? p.view[3] / 72 : p.view[2] / 72;
+          const h = (angle === 90 || angle === 270) ? p.view[2] / 72 : p.view[3] / 72;
+          dimsMap[i] = { width: w, height: h };
+        }
+        setPdfPageDimsIn(dimsMap);
         pdfDocRef.current = pdf;
         setTotalPages(pdf.numPages);
         const page = await pdf.getPage(1);
@@ -686,8 +1061,12 @@ const DocumentComparison: React.FC = () => {
     try {
       const currentScale = baseScale * zoom;
       const newRenderedPages: Record<number, any> = {};
+      const newRotations: Record<number, number> = {};   // ← NEW
+
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
         const page = await pdfDocRef.current.getPage(pageNum);
+        const rotation = page.rotate || 0;               // ← NEW
+
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d", { alpha: false });
         const viewport = page.getViewport({ scale: currentScale * DPI_SCALE });
@@ -717,15 +1096,16 @@ const DocumentComparison: React.FC = () => {
             pageHeight: displayHeight,
             pageWidth: displayWidth,
             displayScale: currentScale,
+            rotation,                                     // ← NEW
           };
         } catch (err: any) {
           if (err.name !== "RenderingCancelledException") throw err;
         }
       }
       setRenderedPages(newRenderedPages);
+      setPageRotations(newRotations);                     // ← NEW
     } catch { }
   };
-
   useEffect(() => {
     if (baseScale && pdfDocRef.current && totalPages > 0) {
       const id = setTimeout(() => renderAllPDFPages(), 100);
@@ -793,17 +1173,17 @@ const DocumentComparison: React.FC = () => {
 
   const scrollToHighlight = (bbox: BoundingBox, targetPage: number) => {
     if (!pdfScrollRef.current || !renderedPages[targetPage]) return;
-    const currentScale = baseScale * zoom;
+
     let cumulativeHeight = 0;
     for (let i = 1; i < targetPage; i++) {
       const prev = renderedPages[i];
       if (prev) cumulativeHeight += prev.pageHeight + 16;
     }
-    const canvasHeight = naturalPageSize.height * currentScale;
+
+    // Use this page's own rendered height (correct for landscape pages)
+    const canvasHeight = renderedPages[targetPage].pageHeight;
     const absoluteHighlightY =
-      cumulativeHeight +
-      bbox.top * canvasHeight +
-      (bbox.height * canvasHeight) / 2;
+      cumulativeHeight + bbox.top * canvasHeight + (bbox.height * canvasHeight) / 2;
     const containerHeight = pdfScrollRef.current.getBoundingClientRect().height;
     pdfScrollRef.current.scrollTo({
       top: Math.max(0, absoluteHighlightY - containerHeight / 2),
@@ -811,60 +1191,54 @@ const DocumentComparison: React.FC = () => {
     });
   };
 
-  const renderHighlightBox = () => {
-    if (
-      !highlightBox ||
-      Object.keys(renderedPages).length === 0 ||
-      !highlightBox.page
-    )
-      return null;
-    const pageData = renderedPages[highlightBox.page];
-    if (!pageData) return null;
-    let cumulativeHeight = 0;
-    for (let i = 1; i < highlightBox.page; i++) {
-      const prev = renderedPages[i];
-      if (prev) cumulativeHeight += prev.pageHeight + 16;
-    }
-    const currentScale = baseScale * zoom;
-    const canvasWidth = naturalPageSize.width * currentScale;
-    const canvasHeight = naturalPageSize.height * currentScale;
-    const borderColor = highlightBox.confidenceScore;
-    return (
-      <div
-        className="absolute pointer-events-none border-[3px] transition-all rounded"
-        style={{
-          left: `${highlightBox.left * canvasWidth - 4}px`,
-          top: `${cumulativeHeight + highlightBox.top * canvasHeight - 4}px`,
-          width: `${highlightBox.width * canvasWidth + 8}px`,
-          height: `${highlightBox.height * canvasHeight + 8}px`,
-          borderColor,
-          backgroundColor: `${borderColor}20`,
-          zIndex: 30,
-        }}
-      >
-        {selectedField && (
-          <div className="absolute -top-9 left-0 bg-[#3C20F6] text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap">
-            <span className="flex items-center gap-1.5">
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              {selectedField.field}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  };
+const renderHighlightBox = () => {
+  if (!highlightBox || Object.keys(renderedPages).length === 0 || !highlightBox.page)
+    return null;
+
+  const pageData = renderedPages[highlightBox.page];
+  if (!pageData) return null;
+
+  let cumulativeHeight = 0;
+  for (let i = 1; i < highlightBox.page; i++) {
+    const prev = renderedPages[i];
+    if (prev) cumulativeHeight += prev.pageHeight + 16;
+  }
+
+  // Use each page's own rendered canvas dimensions (CSS pixels).
+  // Azure DI coordinates are already in display/visual space so NO
+  // rotation transform is needed — pdfjs handles rotation in the viewport.
+  const canvasWidth  = pageData.pageWidth;
+  const canvasHeight = pageData.pageHeight;
+  const { left, top, width, height } = highlightBox;
+  const borderColor = highlightBox.confidenceScore;
+
+  return (
+    <div
+      className="absolute pointer-events-none border-[3px] transition-all rounded"
+      style={{
+        left:            `${left  * canvasWidth  - 4}px`,
+        top:             `${cumulativeHeight + top * canvasHeight - 4}px`,
+        width:           `${width  * canvasWidth  + 8}px`,
+        height:          `${height * canvasHeight + 8}px`,
+        borderColor,
+        backgroundColor: `${borderColor}20`,
+        zIndex:          30,
+      }}
+    >
+      {selectedField && (
+        <div className="absolute -top-9 left-0 bg-[#3C20F6] text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap">
+          <span className="flex items-center gap-1.5">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {selectedField.field}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
 
   const handleEditChange = (
     recordKey: string,
@@ -895,69 +1269,76 @@ const DocumentComparison: React.FC = () => {
   };
 
   const buildTableRows = (): TableRow[] =>
-    !apiResponse ? [] : flattenData(apiResponse?.extractedData?.data);
+    !apiResponse ? [] : flattenData(apiResponse);
   const getFilteredRows = (): TableRow[] => {
     const allRows = buildTableRows();
-    const result: TableRow[] = [];
 
-    let currentSection: TableRow | null = null;
-    let sectionRows: TableRow[] = [];
+    const buildByConfidenceFilter = (activeConfidenceFilter: string): TableRow[] => {
+      const result: TableRow[] = [];
+      let currentSection: TableRow | null = null;
+      let sectionRows: TableRow[] = [];
 
-    const passesFilter = (row: TableRow) => {
-      const score = row.confidence;
+      const passesFilter = (row: TableRow) => {
+        const score = row.confidence;
 
-      let mc = true;
-      if (confidenceFilter !== "all" && score !== null) {
-        switch (confidenceFilter) {
-          case "below_50":
-            mc = score < 50;
-            break;
-          case "50_75":
-            mc = score >= 50 && score < 75;
-            break;
-          case "75_80":
-            mc = score >= 75 && score < 80;
-            break;
-          case "80_85":
-            mc = score >= 80 && score < 85;
-            break;
-          case "85_90":
-            mc = score >= 85 && score < 90;
-            break;
-          case "90_above":
-            mc = score >= 90;
-            break;
+        let mc = true;
+        if (activeConfidenceFilter !== "all" && score !== null) {
+          switch (activeConfidenceFilter) {
+            case "below_50":
+              mc = score < 50;
+              break;
+            case "50_75":
+              mc = score >= 50 && score < 75;
+              break;
+            case "75_80":
+              mc = score >= 75 && score < 80;
+              break;
+            case "80_85":
+              mc = score >= 80 && score < 85;
+              break;
+            case "85_90":
+              mc = score >= 85 && score < 90;
+              break;
+            case "90_above":
+              mc = score >= 90;
+              break;
+          }
+        }
+
+        const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
+
+        return mc && mp;
+      };
+
+      const pushSectionIfValid = () => {
+        if (currentSection && sectionRows.length > 0) {
+          result.push(currentSection, ...sectionRows);
+        }
+      };
+
+      for (const row of allRows) {
+        if (row.isSection) {
+          pushSectionIfValid();
+
+          currentSection = row;
+          sectionRows = [];
+          continue;
+        }
+
+        if (passesFilter(row)) {
+          sectionRows.push(row);
         }
       }
 
-      const mp = pageFilter === "all" ? true : row.page === Number(pageFilter);
-
-      return mc && mp;
+      pushSectionIfValid();
+      return result;
     };
 
-    const pushSectionIfValid = () => {
-      if (currentSection && sectionRows.length > 0) {
-        result.push(currentSection, ...sectionRows);
-      }
-    };
-
-    for (const row of allRows) {
-      if (row.isSection) {
-        pushSectionIfValid();
-
-        currentSection = row;
-        sectionRows = [];
-        continue;
-      }
-
-      if (passesFilter(row)) {
-        sectionRows.push(row);
-      }
+    const primaryResult = buildByConfidenceFilter(confidenceFilter);
+    if (primaryResult.length === 0 && confidenceFilter !== "all") {
+      return buildByConfidenceFilter("all");
     }
-
-    pushSectionIfValid();
-
-    return result;
+    return primaryResult;
   };
 
   const allRows = buildTableRows();
@@ -989,9 +1370,14 @@ const DocumentComparison: React.FC = () => {
     );
   }
 
-  const docStatus = location.state.docStatus ?? [];
+  const routeState = (location.state as {
+    docStatus?: string;
+    isApprovalWindow?: boolean;
+  } | null) ?? null;
 
-  const isDisabled = !location.state.isApprovalWindow;
+  const docStatus = routeState?.docStatus ?? "";
+
+  const isDisabled = !(routeState?.isApprovalWindow ?? false);
   const isSaveSubmitDisabled =
     docStatus == "Pending Approval" || docStatus == "Approved";
 
@@ -1469,3 +1855,4 @@ const DocumentComparison: React.FC = () => {
 };
 
 export default DocumentComparison;
+
